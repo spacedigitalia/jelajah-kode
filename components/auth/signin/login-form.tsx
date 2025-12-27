@@ -1,11 +1,8 @@
 "use client";
 
 import { Code } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
-import { API_ENDPOINTS, apiCall } from "@/lib/config";
 
 import { Button } from "@/components/ui/button";
 
@@ -23,90 +20,30 @@ import Link from "next/link";
 
 import { useAuth } from "@/utils/context/AuthContext";
 
-type Step = "email" | "password";
-
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const { signIn, signInWithGitHub, signInWithGoogle } = useAuth();
-  const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    signInWithGitHub,
+    signInWithGoogle,
+    loginStep,
+    loginEmail,
+    loginPassword,
+    loginIsLoading,
+    setLoginEmail,
+    setLoginPassword,
+    handleEmailSubmit,
+    handlePasswordSubmit,
+    handleBackToEmail,
+  } = useAuth();
 
-  const handleEmailSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!email) {
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // Check if account exists and get provider
-      const result = await apiCall<{
-        exists: boolean;
-        provider?: string;
-      }>(`${API_ENDPOINTS.auth.signIn}/check`, {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-
-      if (result.error || !result.data) {
-        throw new Error(result.error || "Failed to check email");
-      }
-
-      if (!result.data.exists) {
-        throw new Error("No account found with this email");
-      }
-
-      const accountProvider = result.data.provider;
-
-      if (accountProvider && accountProvider !== "email") {
-        throw new Error(
-          `This email is registered with ${accountProvider}. Please use ${accountProvider} to sign in.`
-        );
-      }
-
-      // Email account found, show password field
-      setStep("password");
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An error occurred";
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePasswordSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!email || !password) {
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      await signIn(email, password);
-    } catch (error) {
-      console.error("Login error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleBackToEmail = () => {
-    setStep("email");
-    setPassword("");
-  };
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <form
-        onSubmit={step === "email" ? handleEmailSubmit : handlePasswordSubmit}
+        onSubmit={
+          loginStep === "email" ? handleEmailSubmit : handlePasswordSubmit
+        }
       >
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">
@@ -128,7 +65,7 @@ export function LoginForm({
             </FieldDescription>
           </div>
 
-          {step === "email" && (
+          {loginStep === "email" && (
             <>
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -136,28 +73,28 @@ export function LoginForm({
                   id="email"
                   type="email"
                   placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
                   required
                   autoFocus
                 />
               </Field>
               <Field>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Checking..." : "Continue"}
+                <Button type="submit" disabled={loginIsLoading}>
+                  {loginIsLoading ? "Checking..." : "Continue"}
                 </Button>
               </Field>
             </>
           )}
 
-          {step === "password" && (
+          {loginStep === "password" && (
             <>
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input
                   id="email"
                   type="email"
-                  value={email}
+                  value={loginEmail}
                   disabled
                   className="bg-muted"
                 />
@@ -183,20 +120,20 @@ export function LoginForm({
                   id="password"
                   type="password"
                   placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
                   required
                   autoFocus
                 />
               </Field>
               <Field>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign in"}
+                <Button type="submit" disabled={loginIsLoading}>
+                  {loginIsLoading ? "Signing in..." : "Sign in"}
                 </Button>
               </Field>
             </>
           )}
-          {step === "email" && (
+          {loginStep === "email" && (
             <>
               <FieldSeparator>Or</FieldSeparator>
               <Field className="grid gap-4 sm:grid-cols-2">

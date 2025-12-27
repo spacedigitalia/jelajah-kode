@@ -1,4 +1,4 @@
-import { ChangePasswordWrapper } from "@/components/changepassword-wrapper";
+import { ChangePasswordWrapper } from "@/components/auth/change-password/changepassword-wrapper";
 
 export default function ChangePasswordPage() {
   return (

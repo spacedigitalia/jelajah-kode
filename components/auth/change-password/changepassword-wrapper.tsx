@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+
 import { ChangePasswordForm } from "./changepassword-form";
 
 export function ChangePasswordWrapper() {

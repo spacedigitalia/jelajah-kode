@@ -15,7 +15,7 @@ const accountSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: false,
     },
     name: {
       type: String,
@@ -57,6 +57,7 @@ const accountSchema = new mongoose.Schema(
       type: String,
       enum: ["email", "github", "google"],
       default: "email",
+      required: false,
     },
   },
   {
@@ -66,13 +67,16 @@ const accountSchema = new mongoose.Schema(
 );
 
 accountSchema.pre<IAccount>("save", async function (this: IAccount) {
-  if (!this.isModified("password")) {
+  if (!this.isModified("password") || !this.password) {
     return;
   }
 
   try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+    // Ensure password is defined before hashing
+    if (this.password) {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
   } catch (error) {
     throw error;
   }
@@ -82,7 +86,11 @@ accountSchema.methods.comparePassword = async function (
   this: IAccount,
   candidatePassword: string
 ): Promise<boolean> {
-  return bcrypt.compare(candidatePassword, this.password);
+  // OAuth users don't have passwords
+  if (!this.password) {
+    return false;
+  }
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
 const AccountModel: mongoose.Model<IAccount> =

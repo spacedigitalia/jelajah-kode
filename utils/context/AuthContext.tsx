@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -23,12 +23,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Accounts | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+
+  // Ref to track user state without triggering re-renders in useEffect
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
   const [resetToken, setResetToken] = useState<string | null>(null);
+  // Password reset flow state
+  const [passwordResetStep, setPasswordResetStep] = useState<
+    "otp" | "password"
+  >("otp");
+  const [passwordResetOtp, setPasswordResetOtp] = useState("");
+  const [passwordResetNewPassword, setPasswordResetNewPassword] = useState("");
+  const [passwordResetConfirmPassword, setPasswordResetConfirmPassword] =
+    useState("");
+  const [passwordResetIsLoading, setPasswordResetIsLoading] = useState(false);
+  // Login form state
+  const [loginStep, setLoginStep] = useState<"email" | "password">("email");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginIsLoading, setLoginIsLoading] = useState(false);
+  // Forget password form state
+  const [forgetPasswordEmail, setForgetPasswordEmail] = useState("");
+  const [forgetPasswordIsLoading, setForgetPasswordIsLoading] = useState(false);
+  // Signup form state
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
+  const [signupIsLoading, setSignupIsLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     // Update local state based on NextAuth session
     if (status === "loading") {
+      // Load user data from localStorage while NextAuth is loading
+      // We do this without checking the current user state to avoid dependency issues
+      const storedUser = localStorage.getItem("user");
+      if (storedUser && !userRef.current) {
+        // Only load if there's no user yet
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setUserRole(parsedUser.role);
+        } catch (error) {
+          console.error("Error parsing stored user data:", error);
+          // Clear corrupted data
+          localStorage.removeItem("user");
+        }
+      }
       setLoading(true);
       return;
     }
@@ -42,77 +86,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session.user.email &&
       session.user.id
     ) {
-      // Map NextAuth session user to our Accounts type
-      const account: Accounts = {
-        _id: session.user.id,
-        email: session.user.email,
-        name: session.user.name || "",
-        role: ((session.user.role as string) || "user") as UserRole,
-        picture: session.user.image || undefined,
-        status: "active",
-        isVerified: "true",
-        provider: ((session.user.provider as string) || "email") as
-          | "email"
-          | "github"
-          | "google",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      // Fetch the complete user data from the API to ensure we have the latest account information
+      const fetchUserData = async () => {
+        const userResponse = await apiCall<Accounts>(API_ENDPOINTS.auth.me, {
+          method: "GET",
+        });
+
+        if (userResponse.error || !userResponse.data) {
+          console.error(
+            "Failed to fetch user data:",
+            userResponse.error || "No data returned"
+          );
+          // If API call fails, don't set any user data to avoid default values
+          setUser(null);
+          setUserRole(null);
+          localStorage.removeItem("user");
+        } else {
+          const account = userResponse.data;
+          setUser(account);
+          setUserRole(account.role);
+          localStorage.setItem("user", JSON.stringify(account));
+        }
       };
-      setUser(account);
-      setUserRole(account.role);
-      localStorage.setItem("user", JSON.stringify(account));
+
+      fetchUserData();
     } else if (status === "unauthenticated") {
-      // Explicitly clear user data when not authenticated
-      setUser(null);
-      setUserRole(null);
-      localStorage.removeItem("user");
+      // For unauthenticated users, try to load from localStorage
+      // This handles email/password users who don't have NextAuth sessions
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setUserRole(parsedUser.role);
+        } catch (error) {
+          console.error("Error parsing stored user data:", error);
+          // Clear corrupted data
+          localStorage.removeItem("user");
+          setUser(null);
+          setUserRole(null);
+        }
+      } else {
+        // Only clear user data when no stored data exists
+        setUser(null);
+        setUserRole(null);
+      }
     }
   }, [session, status]);
 
   // Update the signIn function to use NextAuth for email/password
   const signIn = async (email: string, password: string) => {
-    // For email/password sign in, we still use the existing API route
-    // since NextAuth handles OAuth only
+    // Use NextAuth credentials provider for email/password sign in
     try {
-      const result = await apiCall<{
-        user: {
-          _id: string;
-          email: string;
-          name: string;
-          role: UserRole;
-          status: "active" | "inactive";
-          picture?: string;
-          isVerified: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-      }>(API_ENDPOINTS.auth.signIn, {
-        method: "POST",
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+      const result = await nextAuthSignIn("credentials", {
+        email,
+        password,
+        redirect: false, // We handle navigation manually
       });
 
-      if (result.error || !result.data) {
-        throw new Error(result.error || "Failed to sign in");
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
-      const { user: userData } = result.data;
+      // Fetch the complete user data from the API to ensure we have the latest account information
+      const userResponse = await apiCall<Accounts>(API_ENDPOINTS.auth.me, {
+        method: "GET",
+      });
 
-      // Create user session from account data
-      const account: Accounts = {
-        _id: userData._id,
-        email: userData.email,
-        name: userData.name,
-        role: userData.role,
-        status: userData.status,
-        picture: userData.picture,
-        isVerified: userData.isVerified ? "true" : "false",
-        created_at: userData.created_at,
-        updated_at: userData.updated_at,
-      };
+      if (userResponse.error || !userResponse.data) {
+        throw new Error(userResponse.error || "Failed to fetch user data");
+      }
 
+      const account = userResponse.data;
       setUser(account);
       setUserRole(account.role);
       localStorage.setItem("user", JSON.stringify(account));
@@ -130,6 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push("/");
       }
 
+      // Return the fetched user data
       return account;
     } catch (error: unknown) {
       const errorMessage =
@@ -143,6 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Sign out from NextAuth (for OAuth users)
       await nextAuthSignOut({ callbackUrl: "/signin" });
 
       // Clear local state
@@ -155,7 +202,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (error) {
       console.error("Sign out error:", error);
-      toast.error("An unexpected error occurred. Please try again.");
+      // Clear local state even if NextAuth sign out fails
+      setUser(null);
+      setUserRole(null);
+      localStorage.removeItem("user");
+      toast.success("Logged out successfully!", {
+        duration: 2000,
+      });
+    }
+  };
+
+  const refreshUserData = async (): Promise<Accounts | null> => {
+    try {
+      const response = await apiCall<Accounts>(API_ENDPOINTS.auth.me, {
+        method: "GET",
+      });
+
+      if (response.error || !response.data) {
+        console.error(
+          "Failed to refresh user data:",
+          response.error || "No data returned"
+        );
+        return null;
+      }
+
+      const account = response.data;
+      setUser(account);
+      setUserRole(account.role);
+      localStorage.setItem("user", JSON.stringify(account));
+
+      return account;
+    } catch (error) {
+      console.error("Error refreshing user data:", error);
+      return null;
     }
   };
 
@@ -285,6 +364,232 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handleVerifyOtpForPasswordReset = async (otp: string) => {
+    if (!otp || otp.length !== 6) {
+      toast.error("Please enter a valid 6-digit code");
+      return;
+    }
+
+    toast.success("OTP verified!");
+    setPasswordResetStep("password");
+  };
+
+  const handleResetPasswordWithOtp = async () => {
+    if (!passwordResetNewPassword || !passwordResetConfirmPassword) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    if (passwordResetNewPassword.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
+
+    if (passwordResetNewPassword !== passwordResetConfirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    setPasswordResetIsLoading(true);
+
+    try {
+      const result = await apiCall(API_ENDPOINTS.auth.resetPassword, {
+        method: "PUT",
+        body: JSON.stringify({
+          token: passwordResetOtp,
+          newPassword: passwordResetNewPassword,
+        }),
+      });
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      toast.success("Password reset successfully!");
+      router.push("/signin");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to reset password. Please try again.";
+      toast.error(errorMessage);
+    } finally {
+      setPasswordResetIsLoading(false);
+    }
+  };
+
+  const resetPasswordFlowState = () => {
+    setPasswordResetStep("otp");
+    setPasswordResetOtp("");
+    setPasswordResetNewPassword("");
+    setPasswordResetConfirmPassword("");
+    setPasswordResetIsLoading(false);
+  };
+
+  // Login form functions
+  const handleEmailSubmit = async () => {
+    if (!loginEmail) {
+      return;
+    }
+
+    setLoginIsLoading(true);
+
+    try {
+      // Check if account exists and get provider
+      const result = await apiCall<{
+        exists: boolean;
+        provider?: string;
+      }>(`${API_ENDPOINTS.auth.signIn}/check`, {
+        method: "POST",
+        body: JSON.stringify({ email: loginEmail }),
+      });
+
+      if (result.error || !result.data) {
+        throw new Error(result.error || "Failed to check email");
+      }
+
+      if (!result.data.exists) {
+        throw new Error("No account found with this email");
+      }
+
+      const accountProvider = result.data.provider;
+
+      if (accountProvider && accountProvider !== "email") {
+        throw new Error(
+          `This email is registered with ${accountProvider}. Please use ${accountProvider} to sign in.`
+        );
+      }
+
+      // Email account found, show password field
+      setLoginStep("password");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "An error occurred";
+      toast.error(errorMessage);
+    } finally {
+      setLoginIsLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!loginEmail || !loginPassword) {
+      toast.error("Please enter both email and password");
+      return;
+    }
+
+    setLoginIsLoading(true);
+
+    try {
+      const account = await signIn(loginEmail, loginPassword);
+      if (account) {
+        // Reset form after successful login
+        resetLoginState();
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      // Error is already handled in the signIn function
+    } finally {
+      setLoginIsLoading(false);
+    }
+  };
+
+  const handleBackToEmail = () => {
+    setLoginStep("email");
+    setLoginPassword("");
+  };
+
+  const resetLoginState = () => {
+    setLoginStep("email");
+    setLoginEmail("");
+    setLoginPassword("");
+    setLoginIsLoading(false);
+  };
+
+  // Forget password form functions
+  const handleForgetPasswordSubmit = async () => {
+    if (!forgetPasswordEmail) {
+      toast.error("Please enter your email");
+      return;
+    }
+
+    setForgetPasswordIsLoading(true);
+
+    try {
+      const result = await apiCall(API_ENDPOINTS.auth.forgetPassword, {
+        method: "POST",
+        body: JSON.stringify({ email: forgetPasswordEmail }),
+      });
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      toast.success("Password reset code sent to your email!", {
+        duration: 3000,
+      });
+
+      // Redirect to change-password page with email parameter
+      setTimeout(() => {
+        router.push(
+          `/change-password?email=${encodeURIComponent(forgetPasswordEmail)}`
+        );
+      }, 1500);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to send reset code. Please try again.";
+      toast.error(errorMessage);
+    } finally {
+      setForgetPasswordIsLoading(false);
+    }
+  };
+
+  const resetForgetPasswordState = () => {
+    setForgetPasswordEmail("");
+    setForgetPasswordIsLoading(false);
+  };
+
+  // Signup form functions
+  const handleSignupSubmit = async (
+    name: string,
+    email: string,
+    password: string,
+    confirmPassword?: string
+  ) => {
+    // Basic validation
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
+
+    setSignupIsLoading(true);
+
+    try {
+      // Call the signUp function from AuthContext
+      await signUp(name, email, password);
+      // Reset the form after successful signup
+      resetSignupState();
+    } catch (error) {
+      console.error("Signup error:", error);
+    } finally {
+      setSignupIsLoading(false);
+    }
+  };
+
+  const resetSignupState = () => {
+    setSignupName("");
+    setSignupEmail("");
+    setSignupPassword("");
+    setSignupConfirmPassword("");
+    setSignupIsLoading(false);
+  };
+
   const signUp = async (name: string, email: string, password: string) => {
     // For email/password signup, we still use the existing API route
     try {
@@ -369,6 +674,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
     signUpWithGitHub,
     signUpWithGoogle,
+    refreshUserData, // Added function to refresh user data from database
     resetPassword,
     forgetPassword,
     changePassword,
@@ -376,6 +682,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setResetToken,
     verifyOtp,
     finalizeResetPassword,
+    // Password reset flow state
+    passwordResetStep,
+    passwordResetOtp,
+    passwordResetNewPassword,
+    passwordResetConfirmPassword,
+    passwordResetIsLoading,
+    // Password reset flow functions
+    setPasswordResetStep,
+    setPasswordResetOtp,
+    setPasswordResetNewPassword,
+    setPasswordResetConfirmPassword,
+    setPasswordResetIsLoading,
+    handleVerifyOtpForPasswordReset,
+    handleResetPasswordWithOtp,
+    resetPasswordFlowState,
+    // Login form state
+    loginStep,
+    loginEmail,
+    loginPassword,
+    loginIsLoading,
+    // Login form functions
+    setLoginStep,
+    setLoginEmail,
+    setLoginPassword,
+    setLoginIsLoading,
+    handleEmailSubmit,
+    handlePasswordSubmit,
+    handleBackToEmail,
+    resetLoginState,
+    // Forget password form state
+    forgetPasswordEmail,
+    forgetPasswordIsLoading,
+    // Forget password form functions
+    setForgetPasswordEmail,
+    setForgetPasswordIsLoading,
+    handleForgetPasswordSubmit,
+    resetForgetPasswordState,
+    // Signup form state
+    signupName,
+    signupEmail,
+    signupPassword,
+    signupConfirmPassword,
+    signupIsLoading,
+    // Signup form functions
+    setSignupName,
+    setSignupEmail,
+    setSignupPassword,
+    setSignupConfirmPassword,
+    setSignupIsLoading,
+    handleSignupSubmit,
+    resetSignupState,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,12 +1,11 @@
 "use client";
 
 import { Code } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
-import { API_ENDPOINTS, apiCall } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -23,17 +22,24 @@ import {
 } from "@/components/ui/input-otp";
 import Link from "next/link";
 
-type Step = "otp" | "password";
+import { useAuth } from "@/utils/context/AuthContext";
 
 export function ChangePasswordForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const [step, setStep] = useState<Step>("otp");
-  const [otp, setOtp] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    passwordResetStep,
+    passwordResetOtp,
+    passwordResetNewPassword,
+    passwordResetConfirmPassword,
+    passwordResetIsLoading,
+    setPasswordResetOtp,
+    setPasswordResetNewPassword,
+    setPasswordResetConfirmPassword,
+    handleVerifyOtpForPasswordReset,
+    handleResetPasswordWithOtp,
+  } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
@@ -48,57 +54,12 @@ export function ChangePasswordForm({
 
   const handleVerifyOTP = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!otp || otp.length !== 6) {
-      toast.error("Please enter a valid 6-digit code");
-      return;
-    }
-
-    toast.success("OTP verified!");
-    setStep("password");
+    await handleVerifyOtpForPasswordReset(passwordResetOtp);
   };
 
   const handleResetPassword = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!newPassword || !confirmPassword) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters long");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const result = await apiCall(API_ENDPOINTS.auth.resetPassword, {
-        method: "PUT",
-        body: JSON.stringify({ token: otp, newPassword }),
-      });
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      toast.success("Password reset successfully!");
-      router.push("/signin");
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to reset password. Please try again.";
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    await handleResetPasswordWithOtp();
   };
 
   return (
@@ -109,7 +70,7 @@ export function ChangePasswordForm({
         </div>
       ) : (
         <>
-          {step === "otp" && (
+          {passwordResetStep === "otp" && (
             <form onSubmit={handleVerifyOTP}>
               <FieldGroup>
                 <div className="flex flex-col items-center gap-2 text-center">
@@ -135,8 +96,8 @@ export function ChangePasswordForm({
                     maxLength={6}
                     id="otp"
                     required
-                    value={otp}
-                    onChange={(value) => setOtp(value)}
+                    value={passwordResetOtp}
+                    onChange={(value) => setPasswordResetOtp(value)}
                     containerClassName="gap-4"
                   >
                     <InputOTPGroup className="gap-2.5 *:data-[slot=input-otp-slot]:h-16 *:data-[slot=input-otp-slot]:w-12 *:data-[slot=input-otp-slot]:rounded-md *:data-[slot=input-otp-slot]:border *:data-[slot=input-otp-slot]:text-xl">
@@ -164,16 +125,18 @@ export function ChangePasswordForm({
                 <Field>
                   <Button
                     type="submit"
-                    disabled={isLoading || otp.length !== 6}
+                    disabled={
+                      passwordResetIsLoading || passwordResetOtp.length !== 6
+                    }
                   >
-                    {isLoading ? "Verifying..." : "Verify"}
+                    {passwordResetIsLoading ? "Verifying..." : "Verify"}
                   </Button>
                 </Field>
               </FieldGroup>
             </form>
           )}
 
-          {step === "password" && (
+          {passwordResetStep === "password" && (
             <form onSubmit={handleResetPassword}>
               <FieldGroup>
                 <div className="flex flex-col items-center gap-2 text-center">
@@ -195,8 +158,10 @@ export function ChangePasswordForm({
                     id="newPassword"
                     type="password"
                     placeholder="Enter new password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    value={passwordResetNewPassword}
+                    onChange={(e) =>
+                      setPasswordResetNewPassword(e.target.value)
+                    }
                     required
                     minLength={8}
                   />
@@ -212,15 +177,17 @@ export function ChangePasswordForm({
                     id="confirmPassword"
                     type="password"
                     placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    value={passwordResetConfirmPassword}
+                    onChange={(e) =>
+                      setPasswordResetConfirmPassword(e.target.value)
+                    }
                     required
                     minLength={8}
                   />
                 </Field>
                 <Field>
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Resetting..." : "Reset Password"}
+                  <Button type="submit" disabled={passwordResetIsLoading}>
+                    {passwordResetIsLoading ? "Resetting..." : "Reset Password"}
                   </Button>
                 </Field>
               </FieldGroup>
