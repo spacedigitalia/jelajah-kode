@@ -1,26 +1,34 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-import { connectToDatabase } from "@/lib/mongodb";
+import { connectMongoDB } from "@/lib/mongodb";
 
 import { Account } from "@/models/Account";
 
-import { getServerSession } from "next-auth/next";
-
-import { authOptions } from "@/lib/auth";
+import { verifyJWT } from "@/hooks/jwt";
 
 import mongoose from "mongoose";
 
 export async function GET() {
   try {
-    await connectToDatabase();
+    await connectMongoDB();
 
-    const session = await getServerSession(authOptions);
+    // Get token from cookies
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
 
-    if (!session || !session.user?.email) {
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await Account.findOne({ email: session.user.email });
+    let decodedToken;
+    try {
+      decodedToken = await verifyJWT(token);
+    } catch {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    const user = await Account.findById(decodedToken._id);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -39,7 +47,7 @@ export async function GET() {
       picture: user.picture,
       status: user.status,
       isVerified: user.isVerified,
-      provider: user.provider,
+
       created_at:
         userWithTimestamps.createdAt?.toISOString() || new Date().toISOString(),
       updated_at:

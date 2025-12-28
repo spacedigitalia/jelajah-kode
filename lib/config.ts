@@ -3,7 +3,7 @@
  * Contains all API endpoints and configuration used throughout the application
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
 /**
  * Authentication API Endpoints

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { connectToDatabase } from "@/lib/mongodb";
+import { connectMongoDB } from "@/lib/mongodb";
 
 import { Account } from "@/models/Account";
 
@@ -10,7 +10,7 @@ import { generateOTP } from "@/hooks/genrate-otp";
 
 export async function POST(req: NextRequest) {
   try {
-    await connectToDatabase();
+    await connectMongoDB();
 
     const { email } = await req.json();
 
@@ -24,15 +24,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "No account found with this email" },
         { status: 404 }
-      );
-    }
-
-    if (user.provider && user.provider !== "email") {
-      return NextResponse.json(
-        {
-          error: `This account uses ${user.provider} login. Please sign in with ${user.provider} instead.`,
-        },
-        { status: 400 }
       );
     }
 

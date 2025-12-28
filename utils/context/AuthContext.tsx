@@ -8,18 +8,11 @@ import { toast } from "sonner";
 
 import type { Accounts, AuthContextType, UserRole } from "@/types/auth";
 
-import {
-  signIn as nextAuthSignIn,
-  signOut as nextAuthSignOut,
-  useSession,
-} from "next-auth/react";
-
 import { API_ENDPOINTS, apiCall } from "@/lib/config";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
   const [user, setUser] = useState<Accounts | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
@@ -43,10 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginIsLoading, setLoginIsLoading] = useState(false);
-  const [githubSignInLoading, setGithubSignInLoading] = useState(false);
-  const [googleSignInLoading, setGoogleSignInLoading] = useState(false);
-  const [githubSignUpLoading, setGithubSignUpLoading] = useState(false);
-  const [googleSignUpLoading, setGoogleSignUpLoading] = useState(false);
+
   // Forget password form state
   const [forgetPasswordEmail, setForgetPasswordEmail] = useState("");
   const [forgetPasswordIsLoading, setForgetPasswordIsLoading] = useState(false);
@@ -59,91 +49,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Update local state based on NextAuth session
-    if (status === "loading") {
-      // Load user data from localStorage while NextAuth is loading
-      // We do this without checking the current user state to avoid dependency issues
-      const storedUser = localStorage.getItem("user");
-      if (storedUser && !userRef.current) {
-        // Only load if there's no user yet
+    // Check for existing JWT token and fetch user data
+    const initializeAuth = async () => {
+      const token = document.cookie
+        .split(';')
+        .find(cookie => cookie.trim().startsWith('token='))
+        ?.split('=')[1];
+
+      if (token) {
         try {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          setUserRole(parsedUser.role);
-        } catch {
-          localStorage.removeItem("user");
-        }
-      }
-      setLoading(true);
-      return;
-    }
+          // Fetch the complete user data from the API
+          const userResponse = await apiCall<Accounts>(API_ENDPOINTS.auth.me, {
+            method: "GET",
+          });
 
-    setLoading(false);
-
-    // Only set user if session exists AND has a valid email AND user id
-    if (
-      status === "authenticated" &&
-      session?.user &&
-      session.user.email &&
-      session.user.id
-    ) {
-      // Fetch the complete user data from the API to ensure we have the latest account information
-      const fetchUserData = async () => {
-        const userResponse = await apiCall<Accounts>(API_ENDPOINTS.auth.me, {
-          method: "GET",
-        });
-
-        if (userResponse.error || !userResponse.data) {
-          setUser(null);
-          setUserRole(null);
-          localStorage.removeItem("user");
-        } else {
-          const account = userResponse.data;
-          setUser(account);
-          setUserRole(account.role);
-          localStorage.setItem("user", JSON.stringify(account));
-        }
-      };
-
-      fetchUserData();
-    } else if (status === "unauthenticated") {
-      // For unauthenticated users, try to load from localStorage
-      // This handles email/password users who don't have NextAuth sessions
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          setUserRole(parsedUser.role);
-        } catch {
-          // Clear corrupted data
-          localStorage.removeItem("user");
+          if (userResponse.error || !userResponse.data) {
+            // Token exists but user data is invalid, clear the cookie
+            document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            setUser(null);
+            setUserRole(null);
+          } else {
+            const account = userResponse.data;
+            setUser(account);
+            setUserRole(account.role);
+          }
+        } catch (error) {
+          console.error('Auth initialization error:', error);
+          // Error occurred while fetching user data, clear the cookie
+          document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
           setUser(null);
           setUserRole(null);
         }
-      } else {
-        // Only clear user data when no stored data exists
-        setUser(null);
-        setUserRole(null);
       }
-    }
-  }, [session, status]);
 
-  // Update the signIn function to use NextAuth for email/password
+      setLoading(false);
+    };
+
+    initializeAuth();
+  }, []);
+
+
+
   const signIn = async (email: string, password: string) => {
-    // Use NextAuth credentials provider for email/password sign in
     try {
-      const result = await nextAuthSignIn("credentials", {
-        email,
-        password,
-        redirect: false, // We handle navigation manually
+      // Call the sign-in API directly
+      const result = await apiCall(API_ENDPOINTS.auth.signIn, {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
       });
 
-      if (result?.error) {
+      if (result.error) {
         throw new Error(result.error);
       }
 
-      // Fetch the complete user data from the API to ensure we have the latest account information
+      // Fetch the complete user data from the API
       const userResponse = await apiCall<Accounts>(API_ENDPOINTS.auth.me, {
         method: "GET",
       });
@@ -155,7 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const account = userResponse.data;
       setUser(account);
       setUserRole(account.role);
-      localStorage.setItem("user", JSON.stringify(account));
 
       // Show success message and navigate based on role
       if (account.role === "admins") {
@@ -184,19 +142,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Sign out from NextAuth (for OAuth users)
-      await nextAuthSignOut({ redirect: false });
-
-      // Also make a request to our custom signout endpoint to clear JWT cookie
+      // Make a request to our custom signout endpoint to clear JWT cookie
       await fetch(API_ENDPOINTS.auth.signOut, {
         method: "POST",
         credentials: "include",
       });
 
+      // Clear JWT token cookie
+      document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
       // Clear local state
       setUser(null);
       setUserRole(null);
-      localStorage.removeItem("user");
 
       toast.success("Logged out successfully!", {
         duration: 2000,
@@ -208,7 +165,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear local state even if API calls fail
       setUser(null);
       setUserRole(null);
-      localStorage.removeItem("user");
+
+      // Clear JWT token cookie
+      document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
       // Clear any potential JWT tokens from cookies by making API call
       try {
@@ -242,7 +201,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const account = response.data;
       setUser(account);
       setUserRole(account.role);
-      localStorage.setItem("user", JSON.stringify(account));
 
       return account;
     } catch {
@@ -447,10 +405,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoginIsLoading(true);
 
     try {
-      // Check if account exists and get provider
+      // Check if account exists
       const result = await apiCall<{
         exists: boolean;
-        provider?: string;
       }>(`${API_ENDPOINTS.auth.signIn}/check`, {
         method: "POST",
         body: JSON.stringify({ email: loginEmail }),
@@ -464,13 +421,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("No account found with this email");
       }
 
-      const accountProvider = result.data.provider;
-
-      if (accountProvider && accountProvider !== "email") {
-        throw new Error(
-          `This email is registered with ${accountProvider}. Please use ${accountProvider} to sign in.`
-        );
-      }
 
       // Email account found, show password field
       setLoginStep("password");
@@ -630,20 +580,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         status: "active", // Default status
         picture: undefined,
         isVerified: "false", // Will be verified later
-        provider: "email", // Email/password signup
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
 
       setUser(account);
       setUserRole(account.role);
-      localStorage.setItem("user", JSON.stringify(account));
 
       // Show success message and redirect to verification page
       toast.success("Account created successfully! Please verify your email.", {
         duration: 2000,
       });
-      router.push("/verification");
+      router.push(`/verification?email=${encodeURIComponent(email)}`);
 
       return account;
     } catch (error: unknown) {
@@ -656,41 +604,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signInWithGitHub = async (): Promise<void> => {
-    setGithubSignInLoading(true);
-    try {
-      await nextAuthSignIn("github", { callbackUrl: "/api/auth/callback" });
-    } finally {
-      setGithubSignInLoading(false);
-    }
-  };
 
-  const signInWithGoogle = async (): Promise<void> => {
-    setGoogleSignInLoading(true);
-    try {
-      await nextAuthSignIn("google", { callbackUrl: "/api/auth/callback" });
-    } finally {
-      setGoogleSignInLoading(false);
-    }
-  };
-
-  const signUpWithGitHub = async (): Promise<void> => {
-    setGithubSignUpLoading(true);
-    try {
-      await nextAuthSignIn("github", { callbackUrl: "/api/auth/callback" });
-    } finally {
-      setGithubSignUpLoading(false);
-    }
-  };
-
-  const signUpWithGoogle = async (): Promise<void> => {
-    setGoogleSignUpLoading(true);
-    try {
-      await nextAuthSignIn("google", { callbackUrl: "/api/auth/callback" });
-    } finally {
-      setGoogleSignUpLoading(false);
-    }
-  };
 
   const value = {
     user,
@@ -699,15 +613,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signOut,
     signUp,
-    signInWithGitHub,
-    signInWithGoogle,
-    signUpWithGitHub,
-    signUpWithGoogle,
     refreshUserData, // Added function to refresh user data from database
-    githubSignInLoading,
-    googleSignInLoading,
-    githubSignUpLoading,
-    googleSignUpLoading,
+
     resetPassword,
     forgetPassword,
     changePassword,

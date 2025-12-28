@@ -6,6 +6,12 @@ import { useEffect } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { useForm } from "react-hook-form";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { passwordResetSchema } from "@/hooks/validation";
+
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -48,6 +54,22 @@ export function ChangePasswordForm({
     handleVerifyOtpForPasswordReset,
     handleResetPasswordWithOtp,
   } = useAuth();
+
+  const {
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    trigger,
+  } = useForm({
+    resolver: zodResolver(passwordResetSchema),
+    mode: "onBlur",
+  });
+
+  // Update form values when context values change
+  useEffect(() => {
+    setValue("newPassword", passwordResetNewPassword);
+    setValue("confirmPassword", passwordResetConfirmPassword);
+  }, [passwordResetNewPassword, passwordResetConfirmPassword, setValue]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
@@ -65,8 +87,10 @@ export function ChangePasswordForm({
     await handleVerifyOtpForPasswordReset(passwordResetOtp);
   };
 
-  const handleResetPassword = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const onSubmitPassword = async (data: { newPassword: string; confirmPassword: string }) => {
+    // Update context with validated data
+    setPasswordResetNewPassword(data.newPassword);
+    setPasswordResetConfirmPassword(data.confirmPassword);
     await handleResetPasswordWithOtp();
   };
 
@@ -145,7 +169,7 @@ export function ChangePasswordForm({
           )}
 
           {passwordResetStep === "password" && (
-            <form onSubmit={handleResetPassword}>
+            <form onSubmit={handleSubmit(onSubmitPassword)}>
               <FieldGroup>
                 <div className="flex flex-col items-center gap-2 text-center">
                   <a
@@ -166,12 +190,20 @@ export function ChangePasswordForm({
                     id="newPassword"
                     placeholder="Enter new password"
                     value={passwordResetNewPassword}
-                    onChange={(e) =>
-                      setPasswordResetNewPassword(e.target.value)
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setPasswordResetNewPassword(value);
+                      setValue("newPassword", value);
+                      trigger("newPassword");
+                    }}
                     required
                     minLength={8}
                   />
+                  {errors.newPassword && (
+                    <FieldDescription className="text-red-500">
+                      {errors.newPassword.message as string}
+                    </FieldDescription>
+                  )}
                   <FieldDescription>
                     Must be at least 8 characters
                   </FieldDescription>
@@ -184,12 +216,20 @@ export function ChangePasswordForm({
                     id="confirmPassword"
                     placeholder="Confirm new password"
                     value={passwordResetConfirmPassword}
-                    onChange={(e) =>
-                      setPasswordResetConfirmPassword(e.target.value)
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setPasswordResetConfirmPassword(value);
+                      setValue("confirmPassword", value);
+                      trigger("confirmPassword");
+                    }}
                     required
                     minLength={8}
                   />
+                  {errors.confirmPassword && (
+                    <FieldDescription className="text-red-500">
+                      {errors.confirmPassword.message as string}
+                    </FieldDescription>
+                  )}
                 </Field>
                 <Field>
                   <Button type="submit" disabled={passwordResetIsLoading}>

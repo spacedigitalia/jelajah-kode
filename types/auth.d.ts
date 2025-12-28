@@ -10,7 +10,6 @@ interface Accounts {
   picture?: string;
   status: "active" | "inactive";
   isVerified: "true" | "false" | boolean;
-  provider?: "email" | "github" | "google";
   password?: string;
   created_at?: string;
   updated_at?: string;
@@ -27,10 +26,7 @@ interface AuthContextType {
     email: string,
     password: string
   ) => Promise<Accounts | undefined>;
-  signInWithGitHub: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  signUpWithGitHub: () => Promise<void>;
-  signUpWithGoogle: () => Promise<void>;
+
   resetPassword: (email: string) => Promise<void>;
   forgetPassword: (email: string) => Promise<void>;
   changePassword: (newPassword: string) => Promise<boolean>;
@@ -58,10 +54,7 @@ interface AuthContextType {
   loginEmail: string;
   loginPassword: string;
   loginIsLoading: boolean;
-  githubSignInLoading: boolean;
-  googleSignInLoading: boolean;
-  githubSignUpLoading: boolean;
-  googleSignUpLoading: boolean;
+
   // Login form functions
   setLoginStep: (step: "email" | "password") => void;
   setLoginEmail: (email: string) => void;
@@ -112,7 +105,6 @@ export interface IAccount extends mongoose.Document {
   resetTokenExpiry?: Date;
   verificationToken?: string;
   verificationTokenExpiry?: Date;
-  provider?: "email" | "github" | "google";
   comparePassword(candidatePassword: string): Promise<boolean>;
   isModified(path: string): boolean;
   save(): Promise<this>;

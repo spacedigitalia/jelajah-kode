@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 
 import { Account } from "@/models/Account";
 
-import { generateJWT } from "@/utils/auth/token";
+import { generateJWT } from "@/hooks/jwt";
 
-import { connectToDatabase } from "@/lib/mongodb";
+import { connectMongoDB } from "@/lib/mongodb";
 
 import { getEmailService } from "@/lib/email-service";
 
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     const { email, password, name, role } = await request.json();
 
-    await connectToDatabase();
+    await connectMongoDB();
 
     const existingAccount = await Account.findOne({ email });
     if (existingAccount) {
@@ -33,7 +33,6 @@ export async function POST(request: Request) {
       password,
       name,
       role: role || "user",
-      provider: "email",
       verificationToken: otp,
       verificationTokenExpiry: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
     });
@@ -72,7 +71,7 @@ export async function PUT(request: Request) {
   try {
     const { token } = await request.json();
 
-    await connectToDatabase();
+    await connectMongoDB();
 
     const account = await Account.findOne({
       verificationToken: token,

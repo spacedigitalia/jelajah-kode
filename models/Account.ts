@@ -38,8 +38,9 @@ const accountSchema = new mongoose.Schema(
       default: "active",
     },
     isVerified: {
-      type: Boolean,
-      default: false,
+      type: String,
+      enum: ["true", "false"],
+      default: "false",
     },
     resetToken: {
       type: String,
@@ -53,11 +54,9 @@ const accountSchema = new mongoose.Schema(
     verificationTokenExpiry: {
       type: Date,
     },
-    provider: {
-      type: String,
-      enum: ["email", "github", "google"],
-      default: "email",
-      required: false,
+    emailVerified: {
+      type: Boolean,
+      default: true,
     },
   },
   {
@@ -86,7 +85,6 @@ accountSchema.methods.comparePassword = async function (
   this: IAccount,
   candidatePassword: string
 ): Promise<boolean> {
-  // OAuth users don't have passwords
   if (!this.password) {
     return false;
   }

@@ -21,7 +21,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 
-export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
+export function OTPForm({ className, email, ...props }: React.ComponentProps<"div"> & { email?: string }) {
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -38,7 +38,7 @@ export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
 
     try {
       const result = await apiCall<{ user?: { role: string } }>(
-        API_ENDPOINTS.auth.signUp,
+        API_ENDPOINTS.auth.verification,
         {
           method: "PUT",
           body: JSON.stringify({ token: otp }),
@@ -69,10 +69,39 @@ export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
     }
   };
 
+  const [isResending, setIsResending] = useState(false);
+
   const handleResendOTP = async () => {
-    // In a real implementation, you would have an endpoint to resend the OTP
-    // For now, we'll just show a toast
-    toast.info("Resending OTP... (In a real app, this would resend the code)");
+    if (!email) {
+      toast.error("Email is required to resend verification code");
+      return;
+    }
+
+    setIsResending(true);
+
+    try {
+      const result = await apiCall(
+        API_ENDPOINTS.auth.verification,
+        {
+          method: "POST",
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      toast.success("Verification code resent successfully!");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to resend verification code. Please try again.";
+      toast.error(errorMessage);
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -91,7 +120,7 @@ export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
             </a>
             <h1 className="text-xl font-bold">Enter verification code</h1>
             <FieldDescription>
-              We sent a 6-digit code to your email address
+              We sent a 6-digit code to your email address {email || 'your email'}
             </FieldDescription>
           </div>
           <Field>
@@ -123,9 +152,10 @@ export function OTPForm({ className, ...props }: React.ComponentProps<"div">) {
               <button
                 type="button"
                 onClick={handleResendOTP}
-                className="text-blue-600 hover:underline"
+                disabled={isResending}
+                className="text-blue-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Resend
+                {isResending ? "Resending..." : "Resend"}
               </button>
             </FieldDescription>
           </Field>

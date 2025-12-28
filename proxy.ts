@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyJWT } from "@/utils/auth/token";
-import { getToken } from "next-auth/jwt";
+import { verifyJWT } from "@/hooks/jwt";
 
 // Define public paths that don't require authentication
 const publicPaths = [
@@ -20,20 +19,9 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   const { pathname } = request.nextUrl;
 
-  // Allow all NextAuth API routes without middleware check
+  // Allow all NextAuth API routes without proxy check
   if (pathname.startsWith("/api/auth")) {
     return NextResponse.next();
-  }
-
-  // Check NextAuth session token
-  let nextAuthToken = null;
-  try {
-    nextAuthToken = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
-  } catch {
-    // Silent fail - no session
   }
 
   // Check if the path is public (exact match or starts with for auth pages)
@@ -43,17 +31,12 @@ export async function proxy(request: NextRequest) {
   // Check if the path is admin-only
   const isAdminPath = adminPaths.some((path) => pathname.startsWith(path));
 
-  // Determine user role from either NextAuth token or custom JWT
+  // Determine user role from custom JWT token
   let userRole: string | null = null;
   let isAuthenticated = false;
 
-  // Check NextAuth session first (only if token exists and has required fields)
-  if (nextAuthToken && nextAuthToken.email) {
-    userRole = (nextAuthToken.role as string) || "user";
-    isAuthenticated = true;
-  }
-  // Then check custom JWT token
-  else if (token) {
+  // Check custom JWT token
+  if (token) {
     try {
       const payload = await verifyJWT(token);
       userRole = payload.role as string;

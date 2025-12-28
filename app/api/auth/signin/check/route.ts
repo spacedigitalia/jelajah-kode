@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { connectToDatabase } from "@/lib/mongodb";
+import { connectMongoDB } from "@/lib/mongodb";
 
 import { Account } from "@/models/Account";
 
 export async function POST(req: NextRequest) {
   try {
-    await connectToDatabase();
+    await connectMongoDB();
 
     const { email } = await req.json();
 
@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         exists: true,
-        provider: user.provider || "email",
       },
       { status: 200 }
     );
