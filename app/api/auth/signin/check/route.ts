@@ -4,46 +4,11 @@ import { connectMongoDB } from "@/lib/mongodb";
 
 import { Account } from "@/models/Account";
 
-// Helper function to add CORS headers
-function addCorsHeaders(response: NextResponse, origin?: string | null) {
-  const allowedOrigins = [process.env.NEXT_PUBLIC_BASE_URL].filter(
-    (url): url is string => Boolean(url)
-  );
-
-  const originHeader = origin || "";
-  const isAllowedOrigin = allowedOrigins.some(
-    (allowed) => originHeader.startsWith(allowed) || !originHeader
-  );
-
-  if (isAllowedOrigin || !originHeader) {
-    response.headers.set(
-      "Access-Control-Allow-Origin",
-      originHeader || allowedOrigins[0] || "*"
-    );
-  } else {
-    response.headers.set(
-      "Access-Control-Allow-Origin",
-      allowedOrigins[0] || "*"
-    );
-  }
-
-  response.headers.set(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS"
-  );
-  response.headers.set(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization"
-  );
-  response.headers.set("Access-Control-Allow-Credentials", "true");
-
-  return response;
-}
+import { addCorsHeaders, handleCorsOptions } from "@/lib/cors";
 
 // Handle preflight OPTIONS requests
 export async function OPTIONS(req: NextRequest) {
-  const response = new NextResponse(null, { status: 200 });
-  return addCorsHeaders(response, req.headers.get("origin"));
+  return handleCorsOptions(req);
 }
 
 export async function POST(req: NextRequest) {

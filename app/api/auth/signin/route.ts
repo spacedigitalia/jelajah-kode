@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { Account } from "@/models/Account";
 
@@ -6,7 +6,13 @@ import { generateJWT } from "@/hooks/jwt";
 
 import { connectMongoDB } from "@/lib/mongodb";
 
-export async function POST(request: Request) {
+import { addCorsHeaders, handleCorsOptions } from "@/lib/cors";
+
+export async function OPTIONS(req: NextRequest) {
+  return handleCorsOptions(req);
+}
+
+export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
 
@@ -14,18 +20,20 @@ export async function POST(request: Request) {
 
     const account = await Account.findOne({ email });
     if (!account) {
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
       );
+      return addCorsHeaders(errorResponse, request.headers.get("origin"));
     }
 
     const isPasswordValid = await account.comparePassword(password);
     if (!isPasswordValid) {
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
       );
+      return addCorsHeaders(errorResponse, request.headers.get("origin"));
     }
 
     const token = await generateJWT({
@@ -56,12 +64,13 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24, // 24 hours
     });
 
-    return response;
+    return addCorsHeaders(response, request.headers.get("origin"));
   } catch (error: unknown) {
     console.error("Sign in error:", error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 }
     );
+    return addCorsHeaders(errorResponse, request.headers.get("origin"));
   }
 }
