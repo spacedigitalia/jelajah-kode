@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { cookies } from "next/headers";
 
 import { connectMongoDB } from "@/lib/mongodb";
@@ -6,8 +7,6 @@ import { connectMongoDB } from "@/lib/mongodb";
 import { Account } from "@/models/Account";
 
 import { verifyJWT } from "@/hooks/jwt";
-
-import mongoose from "mongoose";
 
 export async function GET() {
   try {
@@ -34,24 +33,30 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const userWithTimestamps = user as mongoose.Document & {
+    // Convert to plain object to access timestamps safely
+    const userObj = user.toObject() as {
+      _id: { toString(): string };
+      email: string;
+      name: string;
+      role: string;
+      picture?: string;
+      status: string;
+      isVerified: string;
       createdAt?: Date;
       updatedAt?: Date;
     };
 
     const userData = {
-      _id: user._id.toString(),
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      picture: user.picture,
-      status: user.status,
-      isVerified: user.isVerified,
+      _id: userObj._id.toString(),
+      email: userObj.email,
+      name: userObj.name,
+      role: userObj.role,
+      picture: userObj.picture,
+      status: userObj.status,
+      isVerified: userObj.isVerified,
 
-      created_at:
-        userWithTimestamps.createdAt?.toISOString() || new Date().toISOString(),
-      updated_at:
-        userWithTimestamps.updatedAt?.toISOString() || new Date().toISOString(),
+      created_at: userObj.createdAt?.toISOString() || new Date().toISOString(),
+      updated_at: userObj.updatedAt?.toISOString() || new Date().toISOString(),
     };
 
     return NextResponse.json(userData, { status: 200 });
