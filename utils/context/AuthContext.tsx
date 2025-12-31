@@ -59,7 +59,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (!userResponse.ok) {
-          throw new Error("Unauthorized");
+          // If response is not OK, check if it's JSON before parsing
+          const contentType = userResponse.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await userResponse.json();
+            throw new Error(errorData.error || "Unauthorized");
+          } else {
+            // If not JSON, just throw a generic error
+            throw new Error("Unauthorized");
+          }
+        }
+
+        // Check content type before parsing JSON
+        const contentType = userResponse.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Invalid response format");
         }
 
         const userResponseData = await userResponse.json();
@@ -96,10 +110,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         credentials: "include",
         body: JSON.stringify({ email, password }),
       });
+
+      // Check content type before parsing JSON
+      const contentType = result.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Invalid response format from server");
+      }
+
       const resultData = await result.json();
 
-      if (resultData.error) {
-        throw new Error(resultData.error);
+      if (!result.ok || resultData.error) {
+        throw new Error(resultData.error || "Sign in failed");
       }
 
       // Fetch the complete user data from the API
@@ -107,10 +128,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: "GET",
         credentials: "include",
       });
+
+      // Check content type before parsing JSON
+      const userContentType = userResponse.headers.get("content-type");
+      if (!userContentType || !userContentType.includes("application/json")) {
+        throw new Error("Invalid response format from server");
+      }
+
       const userResponseData = await userResponse.json();
 
-      if (userResponseData.error) {
-        throw new Error(userResponseData.error);
+      if (!userResponse.ok || userResponseData.error) {
+        throw new Error(userResponseData.error || "Failed to fetch user data");
       }
 
       // The API returns user data directly, not wrapped in a data property
@@ -191,10 +219,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: "GET",
         credentials: "include",
       });
+
+      // Check content type before parsing JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        return null;
+      }
+
       const responseData = await response.json();
 
-      if (responseData.error) {
-        throw new Error(responseData.error);
+      if (!response.ok || responseData.error) {
         return null;
       }
 

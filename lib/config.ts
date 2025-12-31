@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "";
 
 const API_SECRET = process.env.NEXT_PUBLIC_API_SECRET;
 

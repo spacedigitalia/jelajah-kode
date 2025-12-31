@@ -46,6 +46,12 @@ export function OTPForm({ className, email, ...props }: React.ComponentProps<"di
         body: JSON.stringify({ token: otp }),
       });
 
+      // Check content type before parsing JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Invalid response format from server");
+      }
+
       const result = await response.json();
 
       if (!response.ok || result.error) {
@@ -89,6 +95,12 @@ export function OTPForm({ className, email, ...props }: React.ComponentProps<"di
         credentials: "include",
         body: JSON.stringify({ email }),
       });
+
+      // Check content type before parsing JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Invalid response format from server");
+      }
 
       const result = await response.json();
 
