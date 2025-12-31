@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/utils/context/AuthContext";
 
+import { parseIDR } from "@/hooks/FormatPrice";
+
 export function useStateEditProducts() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,6 +28,7 @@ export function useStateEditProducts() {
     faqs: "",
     price: 0,
     stock: 0,
+    download: "",
     category: "",
     frameworks: [],
     tags: [],
@@ -108,6 +111,7 @@ export function useStateEditProducts() {
           faqs: product.faqs,
           price: product.price,
           stock: product.stock,
+          download: product.download || "",
           category:
             product.category && product.category.length > 0
               ? product.category[0].categoryId
@@ -278,7 +282,38 @@ export function useStateEditProducts() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "price" || name === "stock" ? Number(value) : value,
+      [name]:
+        name === "price"
+          ? parseIDR(value)
+          : name === "stock"
+          ? Number(value)
+          : value,
+    }));
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // If empty, set to 0
+    if (value === "" || value === ".") {
+      setFormData((prev) => ({
+        ...prev,
+        price: 0,
+      }));
+      return;
+    }
+
+    // Remove all non-digit characters except dots (for formatting)
+    // But we'll parse it to get the actual number
+    const cleaned = value.replace(/[^\d]/g, "");
+
+    // Parse to number
+    const numericValue = cleaned === "" ? 0 : Number(cleaned);
+
+    // Update formData with numeric value
+    setFormData((prev) => ({
+      ...prev,
+      price: numericValue,
     }));
   };
 
@@ -381,6 +416,7 @@ export function useStateEditProducts() {
     handleFileUpload,
     handleThumbnailUpload,
     handleChange,
+    handlePriceChange,
     handleSubmit,
   };
 }

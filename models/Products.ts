@@ -108,6 +108,10 @@ const productsSchema = new mongoose.Schema(
     sold: {
       type: Number,
     },
+    download: {
+      type: String,
+      required: true,
+    },
     category: {
       type: [productsCategorySchema],
       default: [],
@@ -160,6 +164,7 @@ productsSchema.pre("save", function (next) {
 // Prevent OverwriteModelError by checking if model already exists
 const modelName = process.env.NEXT_PUBLIC_PRODUCTS as string;
 
-const Products =
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Products: any =
   mongoose.models[modelName] || mongoose.model(modelName, productsSchema);
 export default Products;

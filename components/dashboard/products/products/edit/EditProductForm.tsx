@@ -26,6 +26,8 @@ import QuillEditor from "@/helper/editor/QuillEditor";
 
 import { useStateEditProducts } from "@/components/dashboard/products/products/edit/lib/useStateEditProducts";
 
+import { formatIDR } from "@/hooks/FormatPrice";
+
 import FormSkelaton from "@/components/dashboard/products/products/FormSkelaton";
 
 export default function EditProductForm() {
@@ -47,6 +49,7 @@ export default function EditProductForm() {
     handleFileUpload,
     handleThumbnailUpload,
     handleChange,
+    handlePriceChange,
     handleSubmit,
   } = useStateEditProducts();
 
@@ -118,12 +121,12 @@ export default function EditProductForm() {
                   <Input
                     id="price"
                     name="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={handleChange}
+                    type="text"
+                    value={formatIDR(formData.price)}
+                    onChange={handlePriceChange}
                     required
-                    min="0"
-                    step="0.01"
+                    placeholder="0"
+                    inputMode="numeric"
                   />
                 </div>
 
@@ -137,6 +140,18 @@ export default function EditProductForm() {
                     onChange={handleChange}
                     required
                     min="0"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="download">Download URL</Label>
+                  <Input
+                    id="download"
+                    name="download"
+                    type="text"
+                    value={formData.download || ""}
+                    onChange={handleChange}
+                    placeholder="https://example.com/download"
                   />
                 </div>
 
@@ -224,8 +239,8 @@ export default function EditProductForm() {
                         {isThumbnailUploading && formData.thumbnail
                           ? "Uploading new..."
                           : !formData.thumbnail
-                          ? "Choose Thumbnail"
-                          : "Change Thumbnail"}
+                            ? "Choose Thumbnail"
+                            : "Change Thumbnail"}
                       </Button>
                       {thumbnailUploadProgress > 0 && (
                         <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
@@ -336,12 +351,12 @@ export default function EditProductForm() {
                   <Input
                     id="price"
                     name="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={handleChange}
+                    type="text"
+                    value={formatIDR(formData.price)}
+                    onChange={handlePriceChange}
                     required
-                    min="0"
-                    step="0.01"
+                    placeholder="0"
+                    inputMode="numeric"
                   />
                 </div>
 
@@ -355,6 +370,18 @@ export default function EditProductForm() {
                     onChange={handleChange}
                     required
                     min="0"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="download">Download URL</Label>
+                  <Input
+                    id="download"
+                    name="download"
+                    type="text"
+                    value={formData.download || ""}
+                    onChange={handleChange}
+                    placeholder="https://example.com/download"
                   />
                 </div>
 
@@ -410,11 +437,10 @@ export default function EditProductForm() {
                     {frameworks.map((framework) => (
                       <div
                         key={framework.frameworkId}
-                        className={`border rounded-md p-3 cursor-pointer transition-colors ${
-                          formData.frameworks.includes(framework.frameworkId)
-                            ? "border-primary bg-primary/10"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
+                        className={`border rounded-md p-3 cursor-pointer transition-colors ${formData.frameworks.includes(framework.frameworkId)
+                          ? "border-primary bg-primary/10"
+                          : "border-gray-200 hover:border-gray-300"
+                          }`}
                         onClick={() =>
                           setFormData((prev) => ({
                             ...prev,
@@ -422,40 +448,39 @@ export default function EditProductForm() {
                               framework.frameworkId
                             )
                               ? prev.frameworks.filter(
-                                  (id) => id !== framework.frameworkId
-                                )
+                                (id) => id !== framework.frameworkId
+                              )
                               : [...prev.frameworks, framework.frameworkId],
                           }))
                         }
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-4 h-4 rounded border ${
-                              formData.frameworks.includes(
-                                framework.frameworkId
-                              )
-                                ? "bg-primary border-primary"
-                                : "border-gray-300"
-                            }`}
+                            className={`w-4 h-4 rounded border ${formData.frameworks.includes(
+                              framework.frameworkId
+                            )
+                              ? "bg-primary border-primary"
+                              : "border-gray-300"
+                              }`}
                           >
                             {formData.frameworks.includes(
                               framework.frameworkId
                             ) && (
-                              <svg
-                                className="w-4 h-4 text-white"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M5 13l4 4L19 7"
-                                ></path>
-                              </svg>
-                            )}
+                                <svg
+                                  className="w-4 h-4 text-white"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M5 13l4 4L19 7"
+                                  ></path>
+                                </svg>
+                              )}
                           </div>
                           {framework.thumbnail && (
                             <Image
@@ -487,11 +512,10 @@ export default function EditProductForm() {
                     {tags.map((tag) => (
                       <div
                         key={tag._id}
-                        className={`border rounded-md p-3 cursor-pointer transition-colors ${
-                          formData.tags.includes(tag._id)
-                            ? "border-primary bg-primary/10"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
+                        className={`border rounded-md p-3 cursor-pointer transition-colors ${formData.tags.includes(tag._id)
+                          ? "border-primary bg-primary/10"
+                          : "border-gray-200 hover:border-gray-300"
+                          }`}
                         onClick={() =>
                           setFormData((prev) => ({
                             ...prev,
@@ -503,11 +527,10 @@ export default function EditProductForm() {
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-4 h-4 rounded border ${
-                              formData.tags.includes(tag._id)
-                                ? "bg-primary border-primary"
-                                : "border-gray-300"
-                            }`}
+                            className={`w-4 h-4 rounded border ${formData.tags.includes(tag._id)
+                              ? "bg-primary border-primary"
+                              : "border-gray-300"
+                              }`}
                           >
                             {formData.tags.includes(tag._id) && (
                               <svg
@@ -552,10 +575,10 @@ export default function EditProductForm() {
                           ...prev,
                           discount: e.target.checked
                             ? {
-                                type: "percentage",
-                                value: 0,
-                                until: "",
-                              }
+                              type: "percentage",
+                              value: 0,
+                              until: "",
+                            }
                             : undefined,
                         }))
                       }

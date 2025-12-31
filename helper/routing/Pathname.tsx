@@ -1,30 +1,30 @@
 "use client";
 
-import React from "react";
+import React, { Fragment } from "react";
 
-// import { usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 
-// import Header from "@/components/layout/Header";
+import Header from "@/components/layout/Header";
 
-// import Footer from "@/components/layout/Footer";
+import Footer from "@/components/layout/Footer";
 
 import { Toaster } from "sonner";
 
 const Pathname = ({ children }: { children: React.ReactNode }) => {
-  // const pathname = usePathname();
+  const pathname = usePathname();
 
-  // const isRoute =
-  //   pathname?.includes("/signin") ||
-  //   pathname?.includes("/signup") ||
-  //   pathname?.includes("/forgot-password") ||
-  //   pathname?.includes("/verification") ||
-  //   pathname?.includes("/change-password") ||
-  //   pathname?.includes("/reset-password") ||
-  //   pathname?.includes("/dashboard") ||
-  //   false;
+  const isRoute =
+    pathname?.includes("/signin") ||
+    pathname?.includes("/signup") ||
+    pathname?.includes("/forgot-password") ||
+    pathname?.includes("/verification") ||
+    pathname?.includes("/change-password") ||
+    pathname?.includes("/reset-password") ||
+    pathname?.includes("/dashboard") ||
+    false;
 
   return (
-    <main>
+    <Fragment>
       <Toaster
         position="top-center"
         richColors
@@ -33,12 +33,10 @@ const Pathname = ({ children }: { children: React.ReactNode }) => {
           className: "font-medium",
         }}
       />
-      <div>
-        {/* {!isRoute && <Header />} */}
-        {children}
-        {/* {!isRoute && <Footer />} */}
-      </div>
-    </main>
+      {!isRoute && <Header />}
+      {children}
+      {!isRoute && <Footer />}
+    </Fragment>
   );
 };
 

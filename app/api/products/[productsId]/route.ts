@@ -45,6 +45,7 @@ export async function GET(
       price: product.price,
       stock: product.stock,
       sold: product.sold,
+      download: product.download,
       category: product.category,
       rating: product.rating,
       views: product.views,

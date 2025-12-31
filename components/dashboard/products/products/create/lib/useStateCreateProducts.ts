@@ -8,6 +8,8 @@ import { useAuth } from "@/utils/context/AuthContext";
 
 import { generateProjectId } from "@/hooks/TextFormatter";
 
+import { parseIDR } from "@/hooks/FormatPrice";
+
 export function useStateCreateProducts() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -29,6 +31,7 @@ export function useStateCreateProducts() {
     faqs: "",
     price: 0,
     stock: 0,
+    download: "",
     category: "",
     frameworks: [],
     tags: [],
@@ -245,7 +248,38 @@ export function useStateCreateProducts() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "price" || name === "stock" ? Number(value) : value,
+      [name]:
+        name === "price"
+          ? parseIDR(value)
+          : name === "stock"
+          ? Number(value)
+          : value,
+    }));
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // If empty, set to 0
+    if (value === "" || value === ".") {
+      setFormData((prev) => ({
+        ...prev,
+        price: 0,
+      }));
+      return;
+    }
+
+    // Remove all non-digit characters except dots (for formatting)
+    // But we'll parse it to get the actual number
+    const cleaned = value.replace(/[^\d]/g, "");
+
+    // Parse to number
+    const numericValue = cleaned === "" ? 0 : Number(cleaned);
+
+    // Update formData with numeric value
+    setFormData((prev) => ({
+      ...prev,
+      price: numericValue,
     }));
   };
 
@@ -345,6 +379,7 @@ export function useStateCreateProducts() {
     handleFileUpload,
     handleThumbnailUpload,
     handleChange,
+    handlePriceChange,
     handleSubmit,
   };
 }

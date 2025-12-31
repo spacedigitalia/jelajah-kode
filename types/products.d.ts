@@ -10,6 +10,7 @@ interface Products {
   price: number;
   stock: number;
   sold?: number;
+  download?: string;
   category: ProductsCategory[];
   rating?: number;
   views?: number;
@@ -96,6 +97,7 @@ interface CreateFormData {
   faqs: string;
   price: number;
   stock: number;
+  download?: string;
   category: string;
   frameworks: string[];
   tags: string[];
@@ -117,6 +119,7 @@ interface EditFormData {
   faqs: string;
   price: number;
   stock: number;
+  download?: string;
   category: string;
   frameworks: string[];
   tags: string[];

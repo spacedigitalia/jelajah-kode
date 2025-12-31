@@ -25,6 +25,7 @@ import Image from "next/image";
 import QuillEditor from "@/helper/editor/QuillEditor";
 
 import { useStateCreateProducts } from "@/components/dashboard/products/products/create/lib/useStateCreateProducts";
+import { formatIDR } from "@/hooks/FormatPrice";
 
 import FormSkelaton from "@/components/dashboard/products/products/FormSkelaton";
 
@@ -47,6 +48,7 @@ export default function NewProductForm() {
     handleFileUpload,
     handleThumbnailUpload,
     handleChange,
+    handlePriceChange,
     handleSubmit,
   } = useStateCreateProducts();
 
@@ -108,18 +110,18 @@ export default function NewProductForm() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="price">Price *</Label>
                   <Input
                     id="price"
                     name="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={handleChange}
+                    type="text"
+                    value={formatIDR(formData.price)}
+                    onChange={handlePriceChange}
                     required
-                    min="0"
-                    step="0.01"
+                    placeholder="0"
+                    inputMode="numeric"
                   />
                 </div>
 
@@ -133,6 +135,18 @@ export default function NewProductForm() {
                     onChange={handleChange}
                     required
                     min="0"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="download">Download URL</Label>
+                  <Input
+                    id="download"
+                    name="download"
+                    type="text"
+                    value={formData.download || ""}
+                    onChange={handleChange}
+                    placeholder="https://example.com/download"
                   />
                 </div>
 
@@ -191,11 +205,10 @@ export default function NewProductForm() {
                     {tags.map((tag) => (
                       <div
                         key={tag._id}
-                        className={`border rounded-md p-3 cursor-pointer transition-colors ${
-                          formData.tags.includes(tag._id)
-                            ? "border-primary bg-primary/10"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
+                        className={`border rounded-md p-3 cursor-pointer transition-colors ${formData.tags.includes(tag._id)
+                          ? "border-primary bg-primary/10"
+                          : "border-gray-200 hover:border-gray-300"
+                          }`}
                         onClick={() =>
                           setFormData((prev) => ({
                             ...prev,
@@ -207,11 +220,10 @@ export default function NewProductForm() {
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-4 h-4 rounded border ${
-                              formData.tags.includes(tag._id)
-                                ? "bg-primary border-primary"
-                                : "border-gray-300"
-                            }`}
+                            className={`w-4 h-4 rounded border ${formData.tags.includes(tag._id)
+                              ? "bg-primary border-primary"
+                              : "border-gray-300"
+                              }`}
                           >
                             {formData.tags.includes(tag._id) && (
                               <svg
@@ -256,10 +268,10 @@ export default function NewProductForm() {
                           ...prev,
                           discount: e.target.checked
                             ? {
-                                type: "percentage",
-                                value: 0,
-                                until: "",
-                              }
+                              type: "percentage",
+                              value: 0,
+                              until: "",
+                            }
                             : undefined,
                         }))
                       }
@@ -386,8 +398,8 @@ export default function NewProductForm() {
                         {isThumbnailUploading && formData.thumbnail
                           ? "Uploading new..."
                           : !formData.thumbnail
-                          ? "Choose Thumbnail"
-                          : "Change Thumbnail"}
+                            ? "Choose Thumbnail"
+                            : "Change Thumbnail"}
                       </Button>
                       {thumbnailUploadProgress > 0 && (
                         <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
@@ -505,29 +517,27 @@ export default function NewProductForm() {
                     {frameworks.map((framework) => (
                       <div
                         key={framework._id}
-                        className={`border rounded-md p-3 cursor-pointer transition-colors ${
-                          formData.frameworks.includes(framework._id)
-                            ? "border-primary bg-primary/10"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
+                        className={`border rounded-md p-3 cursor-pointer transition-colors ${formData.frameworks.includes(framework._id)
+                          ? "border-primary bg-primary/10"
+                          : "border-gray-200 hover:border-gray-300"
+                          }`}
                         onClick={() =>
                           setFormData((prev) => ({
                             ...prev,
                             frameworks: prev.frameworks.includes(framework._id)
                               ? prev.frameworks.filter(
-                                  (id) => id !== framework._id
-                                )
+                                (id) => id !== framework._id
+                              )
                               : [...prev.frameworks, framework._id],
                           }))
                         }
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-4 h-4 rounded border ${
-                              formData.frameworks.includes(framework._id)
-                                ? "bg-primary border-primary"
-                                : "border-gray-300"
-                            }`}
+                            className={`w-4 h-4 rounded border ${formData.frameworks.includes(framework._id)
+                              ? "bg-primary border-primary"
+                              : "border-gray-300"
+                              }`}
                           >
                             {formData.frameworks.includes(framework._id) && (
                               <svg
