@@ -21,32 +21,6 @@ function decodeJWT(token: string) {
   }
 }
 
-// Format pathname to clean relative path (similar to TextFormatter.ts)
-function formatPathname(pathname: string): string {
-  // Remove domain if present (e.g., "/jelajahkode.vercel.app/api/auth/me" -> "/api/auth/me")
-  let cleaned = pathname.trim();
-
-  // Remove leading domain patterns
-  cleaned = cleaned.replace(/^\/[^\/]+\.(vercel\.app|localhost|local)/, "");
-
-  // Ensure it starts with /
-  if (!cleaned.startsWith("/")) {
-    cleaned = "/" + cleaned;
-  }
-
-  // Remove trailing slashes (except for root)
-  if (cleaned.length > 1 && cleaned.endsWith("/")) {
-    cleaned = cleaned.slice(0, -1);
-  }
-
-  // Don't include API routes in 'from' parameter
-  if (cleaned.startsWith("/api/")) {
-    return "/";
-  }
-
-  return cleaned;
-}
-
 // Define public paths that don't require authentication
 const publicPaths = [
   "/signin",
@@ -113,12 +87,7 @@ export default function proxy(request: NextRequest) {
       const response = NextResponse.next();
       response.cookies.delete("token");
       if (!isPublicPath) {
-        const signinUrl = new URL("/signin", request.url);
-        const formattedPath = formatPathname(pathname);
-        if (formattedPath && formattedPath !== "/signin") {
-          signinUrl.searchParams.set("from", formattedPath);
-        }
-        return NextResponse.redirect(signinUrl);
+        return NextResponse.redirect(new URL("/signin", request.url));
       }
       return response;
     }
@@ -145,24 +114,14 @@ export default function proxy(request: NextRequest) {
 
   // If user is not on a public path and not authenticated, redirect to signin
   if (!isPublicPath && !isAuthenticated) {
-    const signinUrl = new URL("/signin", request.url);
-    const formattedPath = formatPathname(pathname);
-    if (formattedPath && formattedPath !== "/signin") {
-      signinUrl.searchParams.set("from", formattedPath);
-    }
-    return NextResponse.redirect(signinUrl);
+    return NextResponse.redirect(new URL("/signin", request.url));
   }
 
   // If user is on an admin path, verify their role
   if (isAdminPath) {
     if (!isAuthenticated) {
       // If not authenticated at all, redirect to signin
-      const signinUrl = new URL("/signin", request.url);
-      const formattedPath = formatPathname(pathname);
-      if (formattedPath && formattedPath !== "/signin") {
-        signinUrl.searchParams.set("from", formattedPath);
-      }
-      return NextResponse.redirect(signinUrl);
+      return NextResponse.redirect(new URL("/signin", request.url));
     }
 
     if (userRole !== "admins") {
@@ -178,12 +137,7 @@ export default function proxy(request: NextRequest) {
   if (pathname.startsWith("/dashboard/products/products/")) {
     if (!isAuthenticated) {
       // If not authenticated, redirect to signin
-      const signinUrl = new URL("/signin", request.url);
-      const formattedPath = formatPathname(pathname);
-      if (formattedPath && formattedPath !== "/signin") {
-        signinUrl.searchParams.set("from", formattedPath);
-      }
-      return NextResponse.redirect(signinUrl);
+      return NextResponse.redirect(new URL("/signin", request.url));
     }
 
     if (userRole !== "admins") {
