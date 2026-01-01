@@ -5,9 +5,8 @@ import {
   getAllTags,
   updateTag,
   deleteTag,
-} from "@/hooks/tagService";
+} from "@/services/tagService";
 
-// GET all tags
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
 

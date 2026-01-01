@@ -5,6 +5,7 @@ import type React from "react";
 import { toast } from "sonner";
 
 import { generateFrameworkId } from "@/hooks/TextFormatter";
+import { API_CONFIG } from "@/lib/config";
 
 export default function useStateFrameworks() {
   const [frameworks, setFrameworks] = useState<Framework[]>([]);
@@ -55,10 +56,10 @@ export default function useStateFrameworks() {
   const fetchFrameworks = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/products/framework", {
+      const response = await fetch(API_CONFIG.ENDPOINTS.products.framework, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
+          Authorization: `Bearer ${API_CONFIG.SECRET}`,
         },
       });
       const data = await response.json();
@@ -99,10 +100,13 @@ export default function useStateFrameworks() {
         const form = new FormData();
         form.append("file", file);
 
-        const response = await fetch("/api/products/framework/upload", {
-          method: "POST",
-          body: form,
-        });
+        const response = await fetch(
+          API_CONFIG.ENDPOINTS.products.frameworkUpload,
+          {
+            method: "POST",
+            body: form,
+          }
+        );
         if (!response.ok) throw new Error("Upload failed");
 
         const data = await response.json();
@@ -158,7 +162,7 @@ export default function useStateFrameworks() {
 
       if (isEditing) {
         const response = await fetch(
-          `/api/products/framework?id=${formData._id}`,
+          API_CONFIG.ENDPOINTS.products.frameworkById(formData._id),
           {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -173,15 +177,18 @@ export default function useStateFrameworks() {
         toast.success("Framework updated successfully");
       } else {
         const savePromises = pendingUploads.map(async (upload) => {
-          const response = await fetch("/api/products/framework", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              thumbnail: upload.imageUrl,
-              title: upload.title,
-              frameworkId: generateFrameworkId(upload.title),
-            }),
-          });
+          const response = await fetch(
+            API_CONFIG.ENDPOINTS.products.framework,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                thumbnail: upload.imageUrl,
+                title: upload.title,
+                frameworkId: generateFrameworkId(upload.title),
+              }),
+            }
+          );
           if (!response.ok) throw new Error("Failed to save framework");
           return response.json();
         });
@@ -215,9 +222,12 @@ export default function useStateFrameworks() {
   const handleDelete = async (id: string) => {
     try {
       setIsDeleting(true);
-      const response = await fetch(`/api/products/framework?id=${id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        API_CONFIG.ENDPOINTS.products.frameworkById(id),
+        {
+          method: "DELETE",
+        }
+      );
       if (!response.ok) throw new Error("Failed to delete framework");
       toast.success("Framework deleted successfully");
       void fetchFrameworks();

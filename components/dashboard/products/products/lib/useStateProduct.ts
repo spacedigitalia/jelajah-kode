@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import useFormatDate from "@/hooks/FormatDate";
 import { useRouter } from "next/navigation";
+import { API_CONFIG } from "@/lib/config";
 
 interface Product {
   _id: string;
@@ -17,6 +18,10 @@ interface Product {
   category: Array<{
     title: string;
     categoryId: string;
+  }>;
+  type: Array<{
+    title: string;
+    typeId: string;
   }>;
   tags?: Array<{
     title: string;
@@ -39,8 +44,10 @@ export default function useStateProduct() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"card" | "table">("table");
+  const [isViewModeInitialized, setIsViewModeInitialized] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const itemsPerPage = 10;
 
@@ -48,15 +55,12 @@ export default function useStateProduct() {
 
   const { formatDate } = useFormatDate();
 
-  // Filter products based on search term, category, and status
   const filteredProducts = products.filter((product) => {
-    // Search filter
     const matchesSearch =
       product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.productsId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Category filter
     const matchesCategory =
       selectedCategory === "all" ||
       product.category.some(
@@ -64,11 +68,18 @@ export default function useStateProduct() {
           cat.categoryId === selectedCategory || cat.title === selectedCategory
       );
 
+    // Type filter
+    const matchesType =
+      selectedType === "all" ||
+      product.type.some(
+        (type) => type.typeId === selectedType || type.title === selectedType
+      );
+
     // Status filter
     const matchesStatus =
       selectedStatus === "all" || product.status === selectedStatus;
 
-    return matchesSearch && matchesCategory && matchesStatus;
+    return matchesSearch && matchesCategory && matchesType && matchesStatus;
   });
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -97,17 +108,53 @@ export default function useStateProduct() {
     return Array.from(categoryMap.values());
   }, [products]);
 
+  // Extract unique types from products
+  const types = useMemo(() => {
+    const typeMap = new Map<string, { title: string; typeId: string }>();
+
+    products.forEach((product) => {
+      product.type?.forEach((type) => {
+        if (!typeMap.has(type.typeId)) {
+          typeMap.set(type.typeId, {
+            title: type.title,
+            typeId: type.typeId,
+          });
+        }
+      });
+    });
+
+    return Array.from(typeMap.values());
+  }, [products]);
+
   useEffect(() => {
     fetchProducts();
   }, []);
 
+  // Load viewMode from localStorage after component mounts (client-side only)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedViewMode = localStorage.getItem("productsViewMode");
+      if (savedViewMode === "card" || savedViewMode === "table") {
+        setViewMode(savedViewMode);
+      }
+      setIsViewModeInitialized(true);
+    }
+  }, []);
+
+  // Save viewMode to localStorage whenever it changes (only after initialization)
+  useEffect(() => {
+    if (typeof window !== "undefined" && isViewModeInitialized) {
+      localStorage.setItem("productsViewMode", viewMode);
+    }
+  }, [viewMode, isViewModeInitialized]);
+
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/products", {
+      const response = await fetch(API_CONFIG.ENDPOINTS.products.base, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
+          Authorization: `Bearer ${API_CONFIG.SECRET}`,
         },
       });
 
@@ -137,12 +184,15 @@ export default function useStateProduct() {
 
     try {
       setIsSubmitting(true);
-      const response = await fetch(`/api/products?id=${deleteId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
-        },
-      });
+      const response = await fetch(
+        API_CONFIG.ENDPOINTS.products.byId(deleteId),
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${API_CONFIG.SECRET}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to delete product");
@@ -176,10 +226,16 @@ export default function useStateProduct() {
     setCurrentPage(1); // Reset to first page when filtering
   };
 
+  const handleTypeChange = (value: string) => {
+    setSelectedType(value);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
   return {
     // Data
     products,
     categories,
+    types,
     currentProducts,
     filteredProducts,
 
@@ -205,6 +261,7 @@ export default function useStateProduct() {
     // Search and view states
     searchTerm,
     selectedCategory,
+    selectedType,
     selectedStatus,
     viewMode,
     setViewMode,
@@ -218,6 +275,7 @@ export default function useStateProduct() {
     confirmDelete,
     handleSearchChange,
     handleCategoryChange,
+    handleTypeChange,
     handleStatusChange,
     formatDate,
     router,

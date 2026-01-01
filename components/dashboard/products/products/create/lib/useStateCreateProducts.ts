@@ -10,6 +10,8 @@ import { generateProjectId } from "@/hooks/TextFormatter";
 
 import { parseIDR } from "@/hooks/FormatPrice";
 
+import { API_CONFIG } from "@/lib/config";
+
 export function useStateCreateProducts() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,6 +22,7 @@ export function useStateCreateProducts() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [frameworks, setFrameworks] = useState<Framework[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [types, setTypes] = useState<Type[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(true);
 
@@ -35,6 +38,7 @@ export function useStateCreateProducts() {
     category: "",
     frameworks: [],
     tags: [],
+    type: "",
     paymentType: "paid",
     status: "draft",
     images: [],
@@ -71,23 +75,29 @@ export function useStateCreateProducts() {
   useEffect(() => {
     const fetchCollections = async () => {
       try {
-        const [categoriesRes, frameworksRes, tagsRes] = await Promise.all([
-          fetch("/api/products/categories", {
-            headers: {
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
-            },
-          }),
-          fetch("/api/products/framework", {
-            headers: {
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
-            },
-          }),
-          fetch("/api/products/tags", {
-            headers: {
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
-            },
-          }),
-        ]);
+        const [categoriesRes, frameworksRes, tagsRes, typesRes] =
+          await Promise.all([
+            fetch(API_CONFIG.ENDPOINTS.products.categories, {
+              headers: {
+                Authorization: `Bearer ${API_CONFIG.SECRET}`,
+              },
+            }),
+            fetch(API_CONFIG.ENDPOINTS.products.framework, {
+              headers: {
+                Authorization: `Bearer ${API_CONFIG.SECRET}`,
+              },
+            }),
+            fetch(API_CONFIG.ENDPOINTS.products.tags, {
+              headers: {
+                Authorization: `Bearer ${API_CONFIG.SECRET}`,
+              },
+            }),
+            fetch(API_CONFIG.ENDPOINTS.products.type, {
+              headers: {
+                Authorization: `Bearer ${API_CONFIG.SECRET}`,
+              },
+            }),
+          ]);
 
         if (categoriesRes.ok) {
           const categoriesData: Category[] = await categoriesRes.json();
@@ -102,6 +112,11 @@ export function useStateCreateProducts() {
         if (tagsRes.ok) {
           const tagsData: Tag[] = await tagsRes.json();
           setTags(tagsData);
+        }
+
+        if (typesRes.ok) {
+          const typesData: Type[] = await typesRes.json();
+          setTypes(typesData);
         }
       } catch (error) {
         console.error("Error fetching collections:", error);
@@ -151,7 +166,7 @@ export function useStateCreateProducts() {
         });
       }, 200);
 
-      const response = await fetch("/api/products/upload", {
+      const response = await fetch(API_CONFIG.ENDPOINTS.products.upload, {
         method: "POST",
         body: formData,
       });
@@ -216,7 +231,7 @@ export function useStateCreateProducts() {
         });
       }, 200);
 
-      const response = await fetch("/api/products/upload", {
+      const response = await fetch(API_CONFIG.ENDPOINTS.products.upload, {
         method: "POST",
         body: formData,
       });
@@ -302,11 +317,11 @@ export function useStateCreateProducts() {
       const finalPrice = formData.paymentType === "free" ? 0 : formData.price;
 
       // Create new product
-      const response = await fetch("/api/products", {
+      const response = await fetch(API_CONFIG.ENDPOINTS.products.base, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
+          Authorization: `Bearer ${API_CONFIG.SECRET}`,
         },
         body: JSON.stringify({
           title: formData.title,
@@ -336,7 +351,9 @@ export function useStateCreateProducts() {
                   title:
                     categories.find((cat) => cat._id === formData.category)
                       ?.title || "",
-                  categoryId: formData.category,
+                  categoryId:
+                    categories.find((cat) => cat._id === formData.category)
+                      ?.categoryId || "",
                 },
               ]
             : [],
@@ -350,6 +367,16 @@ export function useStateCreateProducts() {
                     thumbnail: fw.thumbnail,
                   }))
               : [],
+          type: formData.type
+            ? [
+                {
+                  title:
+                    types.find((t) => t._id === formData.type)?.title || "",
+                  typeId:
+                    types.find((t) => t._id === formData.type)?.typeId || "",
+                },
+              ]
+            : [],
           discount:
             formData.discount?.type && formData.discount?.value
               ? {
@@ -400,6 +427,7 @@ export function useStateCreateProducts() {
     categories,
     frameworks,
     tags,
+    types,
     loading,
     isPageLoading,
     formData,

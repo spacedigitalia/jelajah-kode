@@ -60,6 +60,10 @@ const data = {
           title: "Products Tags",
           url: "/dashboard/products/tags",
         },
+        {
+          title: "Products Type",
+          url: "/dashboard/products/type",
+        },
       ],
     },
     {
@@ -165,10 +169,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Create user object for NavUser component based on authenticated user
   const currentUser = user
     ? {
-        name: user.name,
-        email: user.email,
-        picture: user.picture || "/avatars/default.jpg", // Use picture if available, otherwise default
-      }
+      name: user.name,
+      email: user.email,
+      picture: user.picture || "/avatars/default.jpg", // Use picture if available, otherwise default
+    }
     : null;
 
   return (

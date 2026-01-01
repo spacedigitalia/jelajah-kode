@@ -55,6 +55,7 @@ export default function NewProductForm() {
     categories,
     frameworks,
     tags,
+    types,
     loading,
     isPageLoading,
     formData,
@@ -73,7 +74,8 @@ export default function NewProductForm() {
   } = useStateCreateProducts();
 
   const [categoryOpen, setCategoryOpen] = React.useState(false);
-
+  const [typeOpen, setTypeOpen] = React.useState(false);
+  const [frameworkSearch, setFrameworkSearch] = React.useState("");
   if (isPageLoading) {
     return <FormSkelaton />;
   }
@@ -246,6 +248,69 @@ export default function NewProductForm() {
                                   className={cn(
                                     "ml-auto h-4 w-4",
                                     formData.category === category._id
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="type">Type</Label>
+                  <Popover open={typeOpen} onOpenChange={setTypeOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={typeOpen}
+                        className="w-full justify-between"
+                      >
+                        {formData.type
+                          ? types.find(
+                            (type) => type._id === formData.type
+                          )?.title
+                          : "Select type..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search type..."
+                          className="h-9"
+                        />
+                        <CommandList>
+                          <CommandEmpty>No type found.</CommandEmpty>
+                          <CommandGroup>
+                            {types.map((type) => (
+                              <CommandItem
+                                key={type._id}
+                                value={type.title}
+                                onSelect={(currentValue) => {
+                                  const selectedType = types.find(
+                                    (t) => t.title === currentValue
+                                  );
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    type:
+                                      selectedType?._id === formData.type
+                                        ? ""
+                                        : selectedType?._id || "",
+                                  }));
+                                  setTypeOpen(false);
+                                }}
+                              >
+                                {type.title}
+                                <Check
+                                  className={cn(
+                                    "ml-auto h-4 w-4",
+                                    formData.type === type._id
                                       ? "opacity-100"
                                       : "opacity-0"
                                   )}
@@ -581,63 +646,86 @@ export default function NewProductForm() {
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-                    {frameworks.map((framework) => (
-                      <div
-                        key={framework._id}
-                        className={`border rounded-md p-3 cursor-pointer transition-colors ${formData.frameworks.includes(framework._id)
-                          ? "border-primary bg-primary/10"
-                          : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            frameworks: prev.frameworks.includes(framework._id)
-                              ? prev.frameworks.filter(
-                                (id) => id !== framework._id
-                              )
-                              : [...prev.frameworks, framework._id],
-                          }))
-                        }
-                      >
-                        <div className="flex items-center gap-3">
+                  <>
+                    <Input
+                      placeholder="Search framework..."
+                      value={frameworkSearch}
+                      onChange={(e) => setFrameworkSearch(e.target.value)}
+                      className="mb-2"
+                    />
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                      {frameworks
+                        .filter((framework) =>
+                          framework.title
+                            .toLowerCase()
+                            .includes(frameworkSearch.toLowerCase())
+                        )
+                        .map((framework) => (
                           <div
-                            className={`w-4 h-4 rounded border ${formData.frameworks.includes(framework._id)
-                              ? "bg-primary border-primary"
-                              : "border-gray-300"
+                            key={framework._id}
+                            className={`border rounded-md p-3 cursor-pointer transition-colors ${formData.frameworks.includes(framework._id)
+                              ? "border-primary bg-primary/10"
+                              : "border-gray-200 hover:border-gray-300"
                               }`}
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                frameworks: prev.frameworks.includes(framework._id)
+                                  ? prev.frameworks.filter(
+                                    (id) => id !== framework._id
+                                  )
+                                  : [...prev.frameworks, framework._id],
+                              }))
+                            }
                           >
-                            {formData.frameworks.includes(framework._id) && (
-                              <svg
-                                className="w-4 h-4 text-white"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-4 h-4 rounded border ${formData.frameworks.includes(framework._id)
+                                  ? "bg-primary border-primary"
+                                  : "border-gray-300"
+                                  }`}
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M5 13l4 4L19 7"
-                                ></path>
-                              </svg>
-                            )}
+                                {formData.frameworks.includes(framework._id) && (
+                                  <svg
+                                    className="w-4 h-4 text-white"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M5 13l4 4L19 7"
+                                    ></path>
+                                  </svg>
+                                )}
+                              </div>
+                              {framework.thumbnail && (
+                                <Image
+                                  src={framework.thumbnail}
+                                  alt={framework.title}
+                                  width={32}
+                                  height={32}
+                                  className="w-8 h-8 object-contain rounded border"
+                                />
+                              )}
+                              <span>{framework.title}</span>
+                            </div>
                           </div>
-                          {framework.thumbnail && (
-                            <Image
-                              src={framework.thumbnail}
-                              alt={framework.title}
-                              width={32}
-                              height={32}
-                              className="w-8 h-8 object-contain rounded border"
-                            />
-                          )}
-                          <span>{framework.title}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                        ))}
+                    </div>
+                    {frameworkSearch && frameworks.filter((framework) =>
+                      framework.title
+                        .toLowerCase()
+                        .includes(frameworkSearch.toLowerCase())
+                    ).length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No framework found matching &quot;{frameworkSearch}&quot;
+                        </p>
+                      )}
+                  </>
                 )}
               </div>
             </div>

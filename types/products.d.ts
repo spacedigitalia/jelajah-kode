@@ -12,6 +12,7 @@ interface Products {
   sold?: number;
   download?: string;
   category: ProductsCategory[];
+  type: ProductsType[];
   rating?: number;
   views?: number;
   ratingCount?: number;
@@ -43,6 +44,11 @@ interface Productsframeworks {
 interface ProductsCategory {
   title: string;
   categoryId: string;
+}
+
+interface ProductsType {
+  title: string;
+  typeId: string;
 }
 
 interface ProductsTags {
@@ -89,6 +95,14 @@ interface Tag {
   updatedAt?: string;
 }
 
+interface Type {
+  _id: string;
+  title: string;
+  typeId: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 interface CreateFormData {
   title: string;
   productsId: string;
@@ -101,6 +115,7 @@ interface CreateFormData {
   category: string;
   frameworks: string[];
   tags: string[];
+  type: string;
   paymentType: "free" | "paid";
   status: "publish" | "draft";
   images: string[];
@@ -123,6 +138,7 @@ interface EditFormData {
   category: string;
   frameworks: string[];
   tags: string[];
+  type: string;
   paymentType: "free" | "paid";
   status: "publish" | "draft";
   images: string[];
@@ -280,3 +296,75 @@ type FormModalProjectsTagsProps = {
   resetForm: () => void;
   useTriggerButton?: boolean;
 };
+
+//====================== Type ======================//
+interface Type {
+  _id: string;
+  title: string;
+  typeId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TypeFormDataState {
+  title: string;
+  typeId: string;
+}
+
+type ProductsTypeProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+  itemTitle?: string;
+};
+
+type FormModalProductsTypeProps = {
+  isDialogOpen: boolean;
+  setIsDialogOpen: (open: boolean) => void;
+  editingType: Type | null;
+  formData: TypeFormDataState;
+  setFormData: React.Dispatch<React.SetStateAction<TypeFormDataState>>;
+  isSubmitting: boolean;
+  handleSubmit: (e: React.FormEvent) => Promise<void> | void;
+  resetForm: () => void;
+  useTriggerButton?: boolean;
+};
+
+//====================== Products Details ======================//
+interface ProductsDetails {
+  _id: string;
+  title: string;
+  productsId: string;
+  thumbnail: string;
+  frameworks: Productsframeworks[];
+  description: string;
+  faqs: string;
+  price: number;
+  stock: number;
+  sold?: number;
+  download?: string;
+  discount?: {
+    type: "percentage" | "fixed";
+    value: number;
+    until?: string;
+  };
+  rating?: number;
+  views?: number;
+  ratingCount?: number;
+  category: ProductsCategory[];
+  images: string[];
+  author: {
+    _id: string;
+    name: string;
+    picture?: string;
+    role: UserRole;
+  };
+  tags: ProductsTags[];
+  type: ProductsType[];
+  paymentType: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}

@@ -78,6 +78,7 @@ export async function GET(request: Request) {
         discount: product.discount,
         author: product.author,
         tags: product.tags,
+        type: product.type,
         paymentType: product.paymentType,
         status: product.status,
         created_at: product.createdAt,
@@ -117,6 +118,7 @@ export async function GET(request: Request) {
         discount: product.discount,
         author: product.author,
         tags: product.tags,
+        type: product.type,
         paymentType: product.paymentType,
         status: product.status,
         created_at: product.createdAt,
@@ -240,8 +242,58 @@ export async function POST(request: Request) {
         );
     };
 
+    // Validate and format category array
+    const formatCategory = (
+      category: unknown
+    ): Array<{ title: string; categoryId: string }> => {
+      const parsed = parseArrayField(category);
+      return parsed
+        .map((cat) => {
+          if (
+            typeof cat === "object" &&
+            cat !== null &&
+            "title" in cat &&
+            "categoryId" in cat
+          ) {
+            return {
+              title: String(cat.title),
+              categoryId: String(cat.categoryId),
+            };
+          }
+          return null;
+        })
+        .filter(
+          (cat): cat is { title: string; categoryId: string } => cat !== null
+        );
+    };
+
+    // Validate and format type array
+    const formatType = (
+      type: unknown
+    ): Array<{ title: string; typeId: string }> => {
+      const parsed = parseArrayField(type);
+      return parsed
+        .map((t) => {
+          if (
+            typeof t === "object" &&
+            t !== null &&
+            "title" in t &&
+            "typeId" in t
+          ) {
+            return {
+              title: String(t.title),
+              typeId: String(t.typeId),
+            };
+          }
+          return null;
+        })
+        .filter((t): t is { title: string; typeId: string } => t !== null);
+    };
+
     // Build product data explicitly to avoid any field conflicts
     const formattedTags = formatTags(body.tags);
+    const formattedCategory = formatCategory(body.category);
+    const formattedType = formatType(body.type);
 
     // Ensure price is set correctly based on paymentType
     const finalPrice =
@@ -264,7 +316,8 @@ export async function POST(request: Request) {
       status: body.status,
       tags: formattedTags,
       frameworks: parseArrayField(body.frameworks),
-      category: parseArrayField(body.category),
+      category: formattedCategory,
+      type: formattedType,
       images: parseArrayField(body.images),
       discount: body.discount || undefined,
       author: body.author,
@@ -297,12 +350,47 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create new product - ensure tags is a fresh array of plain objects
+    // Validate each category has the required structure
+    for (const cat of productData.category) {
+      if (
+        !cat ||
+        typeof cat !== "object" ||
+        !("title" in cat) ||
+        !("categoryId" in cat)
+      ) {
+        console.error("Invalid category structure:", cat);
+        return NextResponse.json(
+          { error: "Each category must have title and categoryId" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate each type has the required structure
+    for (const t of productData.type) {
+      if (!t || typeof t !== "object" || !("title" in t) || !("typeId" in t)) {
+        console.error("Invalid type structure:", t);
+        return NextResponse.json(
+          { error: "Each type must have title and typeId" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Create new product - ensure tags, category, and type are fresh arrays of plain objects
     const productDataForMongoose = {
       ...productData,
       tags: formattedTags.map((tag) => ({
         title: String(tag.title),
         tagsId: String(tag.tagsId),
+      })),
+      category: formattedCategory.map((cat) => ({
+        title: String(cat.title),
+        categoryId: String(cat.categoryId),
+      })),
+      type: formattedType.map((t) => ({
+        title: String(t.title),
+        typeId: String(t.typeId),
       })),
     };
 
@@ -333,6 +421,7 @@ export async function POST(request: Request) {
       discount: savedProduct.discount,
       author: savedProduct.author,
       tags: savedProduct.tags,
+      type: savedProduct.type,
       paymentType: savedProduct.paymentType,
       status: savedProduct.status,
       created_at: savedProduct.createdAt,
@@ -389,10 +478,165 @@ export async function PUT(request: Request) {
 
     const body = await request.json();
 
+    // Helper function to parse array fields that might be stringified
+    const parseArrayField = (field: unknown): unknown[] => {
+      if (Array.isArray(field)) {
+        return field;
+      }
+      if (typeof field === "string") {
+        try {
+          const parsed = JSON.parse(field);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    // Validate and format tags array
+    const formatTags = (
+      tags: unknown
+    ): Array<{ title: string; tagsId: string }> => {
+      const parsed = parseArrayField(tags);
+      return parsed
+        .map((tag) => {
+          if (
+            typeof tag === "object" &&
+            tag !== null &&
+            "title" in tag &&
+            "tagsId" in tag
+          ) {
+            return {
+              title: String(tag.title),
+              tagsId: String(tag.tagsId),
+            };
+          }
+          return null;
+        })
+        .filter(
+          (tag): tag is { title: string; tagsId: string } => tag !== null
+        );
+    };
+
+    // Validate and format category array
+    const formatCategory = (
+      category: unknown
+    ): Array<{ title: string; categoryId: string }> => {
+      const parsed = parseArrayField(category);
+      return parsed
+        .map((cat) => {
+          if (
+            typeof cat === "object" &&
+            cat !== null &&
+            "title" in cat &&
+            "categoryId" in cat
+          ) {
+            return {
+              title: String(cat.title),
+              categoryId: String(cat.categoryId),
+            };
+          }
+          return null;
+        })
+        .filter(
+          (cat): cat is { title: string; categoryId: string } => cat !== null
+        );
+    };
+
+    // Validate and format type array
+    const formatType = (
+      type: unknown
+    ): Array<{ title: string; typeId: string }> => {
+      const parsed = parseArrayField(type);
+      return parsed
+        .map((t) => {
+          if (
+            typeof t === "object" &&
+            t !== null &&
+            "title" in t &&
+            "typeId" in t
+          ) {
+            return {
+              title: String(t.title),
+              typeId: String(t.typeId),
+            };
+          }
+          return null;
+        })
+        .filter((t): t is { title: string; typeId: string } => t !== null);
+    };
+
+    // Format the data
+    const formattedTags = formatTags(body.tags);
+    const formattedCategory = formatCategory(body.category);
+    const formattedType = formatType(body.type);
+
+    // Validate each tag has the required structure
+    for (const tag of formattedTags) {
+      if (
+        !tag ||
+        typeof tag !== "object" ||
+        !("title" in tag) ||
+        !("tagsId" in tag)
+      ) {
+        console.error("Invalid tag structure:", tag);
+        return NextResponse.json(
+          { error: "Each tag must have title and tagsId" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate each category has the required structure
+    for (const cat of formattedCategory) {
+      if (
+        !cat ||
+        typeof cat !== "object" ||
+        !("title" in cat) ||
+        !("categoryId" in cat)
+      ) {
+        console.error("Invalid category structure:", cat);
+        return NextResponse.json(
+          { error: "Each category must have title and categoryId" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate each type has the required structure
+    for (const t of formattedType) {
+      if (!t || typeof t !== "object" || !("title" in t) || !("typeId" in t)) {
+        console.error("Invalid type structure:", t);
+        return NextResponse.json(
+          { error: "Each type must have title and typeId" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Prepare update data with formatted arrays
+    const updateData = {
+      ...body,
+      tags: formattedTags.map((tag) => ({
+        title: String(tag.title),
+        tagsId: String(tag.tagsId),
+      })),
+      category: formattedCategory.map((cat) => ({
+        title: String(cat.title),
+        categoryId: String(cat.categoryId),
+      })),
+      type: formattedType.map((t) => ({
+        title: String(t.title),
+        typeId: String(t.typeId),
+      })),
+      updatedAt: new Date(),
+    };
+
     // Find and update the product
     const updatedProduct = await Products.findByIdAndUpdate(
       id,
-      { ...body, updatedAt: new Date() },
+      updateData,
       { new: true } // Return the updated document
     );
 
@@ -419,6 +663,7 @@ export async function PUT(request: Request) {
       discount: updatedProduct.discount,
       author: updatedProduct.author,
       tags: updatedProduct.tags,
+      type: updatedProduct.type,
       paymentType: updatedProduct.paymentType,
       status: updatedProduct.status,
       created_at: updatedProduct.createdAt,

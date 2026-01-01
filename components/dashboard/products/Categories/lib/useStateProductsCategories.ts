@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import { toast } from "sonner";
 
+import { API_CONFIG } from "@/lib/config";
+
 export default function useStateProjectsCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,10 +24,10 @@ export default function useStateProjectsCategories() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch("/api/products/categories", {
+      const response = await fetch(API_CONFIG.ENDPOINTS.products.categories, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
+          Authorization: `Bearer ${API_CONFIG.SECRET}`,
         },
       });
       if (!response.ok) {
@@ -61,7 +63,7 @@ export default function useStateProjectsCategories() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const url = "/api/products/categories";
+      const url = API_CONFIG.ENDPOINTS.products.categories;
       const method = editingCategory ? "PUT" : "POST";
       const body = editingCategory
         ? {
@@ -103,7 +105,7 @@ export default function useStateProjectsCategories() {
 
     setIsDeleting(true);
     try {
-      const response = await fetch("/api/products/categories", {
+      const response = await fetch(API_CONFIG.ENDPOINTS.products.categories, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: categoryToDelete._id }),

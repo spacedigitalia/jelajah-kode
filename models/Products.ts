@@ -32,6 +32,20 @@ const productsCategorySchema = new mongoose.Schema(
   { _id: false }
 );
 
+const productsTypeSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+    },
+    typeId: {
+      type: String,
+      required: true,
+    },
+  },
+  { _id: false }
+);
+
 const productsTagsSchema = new mongoose.Schema(
   {
     title: {
@@ -143,6 +157,10 @@ const productsSchema = new mongoose.Schema(
     },
     category: {
       type: [productsCategorySchema],
+      default: [],
+    },
+    type: {
+      type: [productsTypeSchema],
       default: [],
     },
     rating: {

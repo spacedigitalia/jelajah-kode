@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+
 import {
     Sheet,
     SheetContent,
@@ -9,22 +10,12 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 
-interface BottomSheetProps {
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-    trigger?: React.ReactNode;
-    title?: string;
-    description?: string;
-    children: React.ReactNode;
-    side?: "top" | "right" | "bottom" | "left";
-    className?: string;
-    contentClassName?: string;
-    showHeader?: boolean;
-    responsive?: boolean;
-}
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+import { useIsMobile } from "@/hooks/use-mobile";
+
+import { cn } from "@/lib/utils";
 
 export default function BottomSheet({
     open,
@@ -68,7 +59,9 @@ export default function BottomSheet({
                         {description && <SheetDescription>{description}</SheetDescription>}
                     </SheetHeader>
                 )}
-                <div className={className}>{children}</div>
+                <ScrollArea className={cn("h-full", className)}>
+                    {children}
+                </ScrollArea>
             </SheetContent>
         </Sheet>
     );

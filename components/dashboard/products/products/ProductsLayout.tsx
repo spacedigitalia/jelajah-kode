@@ -17,7 +17,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Badge } from "@/components/ui/badge";
 
-
 import BottomSheet from "@/helper/bottomsheets/BottomShets";
 
 import { Search, Plus, Pencil, Trash2, Eye, Grid3X3, List, Filter } from "lucide-react";
@@ -26,15 +25,18 @@ import Image from "next/image";
 
 import DeleteModalProducts from "@/components/dashboard/products/products/modal/DeleteModalProducts";
 
-import useStateProduct from "./lib/useStateProduct";
+import useStateProduct from "@/components/dashboard/products/products/lib/useStateProduct";
 
 import { formatIDR } from "@/hooks/FormatPrice";
+
+import ProductsSkelaton from "@/components/dashboard/products/products/ProductsSkelaton";
 
 export default function ProductsLayout() {
   const {
     // Data
     products,
     categories,
+    types,
     currentProducts,
 
     // Loading states
@@ -58,6 +60,7 @@ export default function ProductsLayout() {
     // Search and view states
     searchTerm,
     selectedCategory,
+    selectedType,
     selectedStatus,
     viewMode,
     setViewMode,
@@ -71,18 +74,14 @@ export default function ProductsLayout() {
     confirmDelete,
     handleSearchChange,
     handleCategoryChange,
+    handleTypeChange,
     handleStatusChange,
     formatDate,
     router,
   } = useStateProduct();
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="ml-2">Loading products...</span>
-      </div>
-    );
+    return <ProductsSkelaton />;
   }
 
   return (
@@ -127,6 +126,7 @@ export default function ProductsLayout() {
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             </div>
+
             <BottomSheet
               open={isFilterSheetOpen}
               onOpenChange={setIsFilterSheetOpen}
@@ -137,13 +137,13 @@ export default function ProductsLayout() {
                 </Button>
               }
               title="Filter Products"
-              description="Filter products by category, status, and view mode"
+              description="Filter products by category, type, status, and view mode"
               side="right"
               contentClassName="w-full max-w-full"
               className="space-y-6 px-4"
             >
               {/* Category Filter */}
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 mb-2">
                 <label className="text-sm font-medium">Category</label>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -172,8 +172,36 @@ export default function ProductsLayout() {
                 </div>
               </div>
 
+              {/* Type Filter */}
+              <div className="flex flex-col gap-3 mb-2">
+                <label className="text-sm font-medium">Type</label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={selectedType === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleTypeChange("all")}
+                    className="h-9"
+                  >
+                    All Types
+                  </Button>
+                  {types.map((type) => (
+                    <Button
+                      key={type.typeId}
+                      variant={
+                        selectedType === type.typeId ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => handleTypeChange(type.typeId)}
+                      className="h-9"
+                    >
+                      {type.title}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
               {/* Status Filter */}
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 mb-2">
                 <label className="text-sm font-medium">Status</label>
                 <div className="flex flex-wrap gap-2">
                   <Button

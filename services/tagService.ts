@@ -2,19 +2,13 @@ import TagsModel from "@/models/Tags";
 
 import { connectMongoDB } from "@/lib/mongodb";
 
-// Create a new tag
+import { generateFrameworkId } from "@/hooks/TextFormatter";
+
 export async function createTag(data: { title: string; tagsId?: string }) {
   try {
     await connectMongoDB();
     // Create tag with the provided tagsId or generate from title
-    const tagsId =
-      data.tagsId ||
-      data.title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim();
+    const tagsId = data.tagsId || generateFrameworkId(data.title);
     const tag = await TagsModel.create({
       title: data.title,
       tagsId: tagsId,
@@ -29,12 +23,9 @@ export async function createTag(data: { title: string; tagsId?: string }) {
 export async function getAllTags() {
   try {
     await connectMongoDB();
-    console.log("Fetching tags...");
     const tags = await TagsModel.find().sort({ createdAt: -1 }).lean();
-    console.log("Tags fetched:", tags);
     return tags;
   } catch (error) {
-    console.error("Error in getAllTags:", error);
     throw error;
   }
 }
@@ -58,14 +49,7 @@ export async function updateTag(
   try {
     await connectMongoDB();
     // Generate tagsId from title if not provided
-    const tagsId =
-      data.tagsId ||
-      data.title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim();
+    const tagsId = data.tagsId || generateFrameworkId(data.title);
     const tag = await TagsModel.findByIdAndUpdate(
       id,
       { title: data.title, tagsId: tagsId, updatedAt: new Date() },

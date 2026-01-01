@@ -8,6 +8,8 @@ import { useAuth } from "@/utils/context/AuthContext";
 
 import { parseIDR } from "@/hooks/FormatPrice";
 
+import { API_CONFIG } from "@/lib/config";
+
 export function useStateEditProducts() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -17,6 +19,7 @@ export function useStateEditProducts() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [frameworks, setFrameworks] = useState<Framework[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [types, setTypes] = useState<Type[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(true);
 
@@ -32,6 +35,7 @@ export function useStateEditProducts() {
     category: "",
     frameworks: [],
     tags: [],
+    type: "",
     paymentType: "paid",
     status: "draft",
     images: [],
@@ -53,27 +57,34 @@ export function useStateEditProducts() {
     const fetchCollectionsAndProduct = async () => {
       try {
         // Fetch collections first
-        const [categoriesRes, frameworksRes, tagsRes] = await Promise.all([
-          fetch("/api/products/categories", {
-            headers: {
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
-            },
-          }),
-          fetch("/api/products/framework", {
-            headers: {
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
-            },
-          }),
-          fetch("/api/products/tags", {
-            headers: {
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
-            },
-          }),
-        ]);
+        const [categoriesRes, frameworksRes, tagsRes, typesRes] =
+          await Promise.all([
+            fetch(API_CONFIG.ENDPOINTS.products.categories, {
+              headers: {
+                Authorization: `Bearer ${API_CONFIG.SECRET}`,
+              },
+            }),
+            fetch(API_CONFIG.ENDPOINTS.products.framework, {
+              headers: {
+                Authorization: `Bearer ${API_CONFIG.SECRET}`,
+              },
+            }),
+            fetch(API_CONFIG.ENDPOINTS.products.tags, {
+              headers: {
+                Authorization: `Bearer ${API_CONFIG.SECRET}`,
+              },
+            }),
+            fetch(API_CONFIG.ENDPOINTS.products.type, {
+              headers: {
+                Authorization: `Bearer ${API_CONFIG.SECRET}`,
+              },
+            }),
+          ]);
 
         let categoriesData: Category[] = [];
         let frameworksData: Framework[] = [];
         let tagsData: Tag[] = [];
+        let typesData: Type[] = [];
 
         if (categoriesRes.ok) {
           categoriesData = await categoriesRes.json();
@@ -90,12 +101,20 @@ export function useStateEditProducts() {
           setTags(tagsData);
         }
 
+        if (typesRes.ok) {
+          typesData = await typesRes.json();
+          setTypes(typesData);
+        }
+
         // Then fetch product data
-        const response = await fetch(`/api/products?id=${productId}`, {
-          headers: {
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
-          },
-        });
+        const response = await fetch(
+          API_CONFIG.ENDPOINTS.products.byId(productId),
+          {
+            headers: {
+              Authorization: `Bearer ${API_CONFIG.SECRET}`,
+            },
+          }
+        );
         if (!response.ok) {
           throw new Error("Failed to fetch product");
         }
@@ -114,10 +133,31 @@ export function useStateEditProducts() {
           download: product.download || "",
           category:
             product.category && product.category.length > 0
-              ? product.category[0].categoryId
+              ? (() => {
+                  const categoryId = product.category[0].categoryId;
+                  const foundCategory = categoriesData.find(
+                    (cat) => cat.categoryId === categoryId
+                  );
+                  return foundCategory ? foundCategory._id : "";
+                })()
+              : "",
+          type:
+            product.type && product.type.length > 0
+              ? (() => {
+                  const typeId = product.type[0].typeId;
+                  const foundType = typesData.find((t) => t.typeId === typeId);
+                  return foundType ? foundType._id : "";
+                })()
               : "",
           frameworks: product.frameworks
-            ? product.frameworks.map((fw: Productsframeworks) => fw.frameworkId)
+            ? (() => {
+                const frameworkIds = product.frameworks.map(
+                  (fw: Productsframeworks) => fw.frameworkId
+                );
+                return frameworksData
+                  .filter((fw) => frameworkIds.includes(fw.frameworkId))
+                  .map((fw) => fw._id);
+              })()
             : [],
           paymentType: product.paymentType,
           status: product.status,
@@ -175,7 +215,7 @@ export function useStateEditProducts() {
         });
       }, 200);
 
-      const response = await fetch("/api/products/upload", {
+      const response = await fetch(API_CONFIG.ENDPOINTS.products.upload, {
         method: "POST",
         body: formData,
       });
@@ -240,7 +280,7 @@ export function useStateEditProducts() {
         });
       }, 200);
 
-      const response = await fetch("/api/products/upload", {
+      const response = await fetch(API_CONFIG.ENDPOINTS.products.upload, {
         method: "POST",
         body: formData,
       });
@@ -321,62 +361,87 @@ export function useStateEditProducts() {
     e.preventDefault();
     setIsSubmitting(true);
 
+    if (!productId) {
+      toast.error("Product ID is required");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       // Update existing product
-      const response = await fetch(`/api/products?id=${productId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_SECRET}`,
-        },
-        body: JSON.stringify({
-          ...formData,
-          tags: formData.tags
-            .map((tagId) => {
-              const tag = tags.find((t) => t._id === tagId);
-              return tag
-                ? {
-                    title: tag.title,
-                    tagsId: tag.tagsId,
-                  }
-                : null;
-            })
-            .filter((tag) => tag !== null),
-          category: formData.category
-            ? [
-                {
-                  title:
-                    categories.find((cat) => cat._id === formData.category)
-                      ?.title || "",
-                  categoryId: formData.category,
-                },
-              ]
-            : [],
-          frameworks:
-            formData.frameworks.length > 0
-              ? frameworks.filter((fw) =>
-                  formData.frameworks.includes(fw.frameworkId)
-                )
+      const response = await fetch(
+        API_CONFIG.ENDPOINTS.products.byId(productId),
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${API_CONFIG.SECRET}`,
+          },
+          body: JSON.stringify({
+            ...formData,
+            tags: formData.tags
+              .map((tagId) => {
+                const tag = tags.find((t) => t._id === tagId);
+                return tag
+                  ? {
+                      title: tag.title,
+                      tagsId: tag.tagsId,
+                    }
+                  : null;
+              })
+              .filter((tag) => tag !== null),
+            category: formData.category
+              ? [
+                  {
+                    title:
+                      categories.find((cat) => cat._id === formData.category)
+                        ?.title || "",
+                    categoryId:
+                      categories.find((cat) => cat._id === formData.category)
+                        ?.categoryId || "",
+                  },
+                ]
               : [],
-          discount:
-            formData.discount?.type && formData.discount?.value
+            type: formData.type
+              ? [
+                  {
+                    title:
+                      types.find((t) => t._id === formData.type)?.title || "",
+                    typeId:
+                      types.find((t) => t._id === formData.type)?.typeId || "",
+                  },
+                ]
+              : [],
+            frameworks:
+              formData.frameworks.length > 0
+                ? frameworks
+                    .filter((fw) => formData.frameworks.includes(fw._id))
+                    .map((fw) => ({
+                      title: fw.title,
+                      frameworkId: fw.frameworkId,
+                      thumbnail: fw.thumbnail,
+                    }))
+                : [],
+            discount:
+              formData.discount?.type && formData.discount?.value
+                ? {
+                    type: formData.discount.type,
+                    value: formData.discount.value,
+                    until: formData.discount.until || undefined,
+                  }
+                : undefined,
+            images: formData.images ? formData.images : [],
+            author: user
               ? {
-                  type: formData.discount.type,
-                  value: formData.discount.value,
-                  until: formData.discount.until || undefined,
+                  _id: user._id,
+                  name: user.name,
+                  picture: user.picture,
+                  role: user.role,
                 }
               : undefined,
-          images: formData.images ? formData.images : [],
-          author: user
-            ? {
-                _id: user._id,
-                name: user.name,
-                picture: user.picture,
-                role: user.role,
-              }
-            : undefined,
-        }),
-      });
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -401,6 +466,7 @@ export function useStateEditProducts() {
     categories,
     frameworks,
     tags,
+    types,
     loading,
     isPageLoading,
     formData,

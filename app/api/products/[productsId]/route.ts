@@ -54,6 +54,7 @@ export async function GET(
       discount: product.discount,
       author: product.author,
       tags: product.tags,
+      type: product.type,
       paymentType: product.paymentType,
       status: product.status,
       created_at: product.createdAt,

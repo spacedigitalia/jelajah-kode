@@ -14,3 +14,18 @@ interface EmailConfig {
     pass: string;
   };
 }
+
+//=================== Bottom Sheet ===================//
+interface BottomSheetProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
+  title?: string;
+  description?: string;
+  children: React.ReactNode;
+  side?: "top" | "right" | "bottom" | "left";
+  className?: string;
+  contentClassName?: string;
+  showHeader?: boolean;
+  responsive?: boolean;
+}

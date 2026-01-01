@@ -5,7 +5,7 @@ import {
   getAllCategories,
   updateCategory,
   deleteCategory,
-} from "@/hooks/categoryService";
+} from "@/services/categoryService";
 
 // GET all categories
 export async function GET(request: Request) {

@@ -2,7 +2,8 @@ import { Category } from "@/models/Category";
 
 import { connectMongoDB } from "@/lib/mongodb";
 
-// Create a new category
+import { generateFrameworkId } from "@/hooks/TextFormatter";
+
 export async function createCategory(data: {
   title: string;
   categoryId?: string;
@@ -10,14 +11,7 @@ export async function createCategory(data: {
   try {
     await connectMongoDB();
     // Create category with the provided categoryId or generate from title
-    const categoryId =
-      data.categoryId ||
-      data.title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim();
+    const categoryId = data.categoryId || generateFrameworkId(data.title);
     const category = await Category.create({
       title: data.title,
       categoryId: categoryId,
@@ -32,12 +26,9 @@ export async function createCategory(data: {
 export async function getAllCategories() {
   try {
     await connectMongoDB();
-    console.log("Fetching categories...");
     const categories = await Category.find().sort({ createdAt: -1 }).lean();
-    console.log("Categories fetched:", categories);
     return categories;
   } catch (error) {
-    console.error("Error in getAllCategories:", error);
     throw error;
   }
 }
@@ -61,14 +52,7 @@ export async function updateCategory(
   try {
     await connectMongoDB();
     // Generate categoryId from title if not provided
-    const categoryId =
-      data.categoryId ||
-      data.title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim();
+    const categoryId = data.categoryId || generateFrameworkId(data.title);
     const category = await Category.findByIdAndUpdate(
       id,
       { title: data.title, categoryId: categoryId, updatedAt: new Date() },
