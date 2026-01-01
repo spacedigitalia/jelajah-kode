@@ -15,7 +15,7 @@ export const fetchProducts = async (): Promise<Products[]> => {
     }
 
     const data = await response.json();
-    return data;
+    return Array.isArray(data) ? data : data?.data || [];
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
       console.error("Error fetching products:", error);

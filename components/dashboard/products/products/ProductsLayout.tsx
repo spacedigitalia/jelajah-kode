@@ -364,7 +364,7 @@ export default function ProductsLayout() {
                       className="flex-1"
                       onClick={() =>
                         router.push(
-                          `/dashboard/products/products/edit?id=${product._id}`
+                          `/dashboard/products/products/edit?id=${product.productsId}`
                         )
                       }
                     >
@@ -491,7 +491,7 @@ export default function ProductsLayout() {
                           size="icon"
                           onClick={() =>
                             router.push(
-                              `/dashboard/products/products/edit?id=${product._id}`
+                              `/dashboard/products/products/edit?id=${product.productsId}`
                             )
                           }
                           disabled={isSubmitting}

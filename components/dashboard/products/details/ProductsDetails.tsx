@@ -69,7 +69,7 @@ export default function ProductsDetails({ product }: { product: ProductsDetails 
                             <Button
                                 variant="outline"
                                 size="lg"
-                                onClick={() => router.push(`/dashboard/products/products/edit?id=${product._id}`)}
+                                onClick={() => router.push(`/dashboard/products/products/edit?id=${product.productsId}`)}
                                 className="shadow-sm hover:shadow-md transition-shadow"
                             >
                                 ✏️ Edit Product

@@ -46,6 +46,7 @@ export function useStateEditProducts() {
   const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [thumbnailUploadProgress, setThumbnailUploadProgress] = useState(0);
+  const [productMongoId, setProductMongoId] = useState<string>("");
 
   // Combined effect for validation and data fetching
   useEffect(() => {
@@ -106,9 +107,9 @@ export function useStateEditProducts() {
           setTypes(typesData);
         }
 
-        // Then fetch product data
+        // Fetch product data using productsId endpoint
         const response = await fetch(
-          API_CONFIG.ENDPOINTS.products.byId(productId),
+          API_CONFIG.ENDPOINTS.products.byProductsId(productId),
           {
             headers: {
               Authorization: `Bearer ${API_CONFIG.SECRET}`,
@@ -119,6 +120,11 @@ export function useStateEditProducts() {
           throw new Error("Failed to fetch product");
         }
         const product: Products = await response.json();
+
+        // Store MongoDB _id for PUT request
+        if (product._id) {
+          setProductMongoId(product._id);
+        }
 
         // Set form data with existing product data
         setFormData((prevFormData) => ({
@@ -368,9 +374,15 @@ export function useStateEditProducts() {
     }
 
     try {
-      // Update existing product
+      // Update existing product using _id from MongoDB
+      if (!productMongoId) {
+        toast.error("Product ID is required");
+        setIsSubmitting(false);
+        return;
+      }
+
       const response = await fetch(
-        API_CONFIG.ENDPOINTS.products.byId(productId),
+        API_CONFIG.ENDPOINTS.products.byId(productMongoId),
         {
           method: "PUT",
           headers: {
