@@ -2,11 +2,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
 const API_SECRET = process.env.NEXT_PUBLIC_API_SECRET;
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
-
 export const API_CONFIG = {
   ENDPOINTS: {
-    base: BASE_URL,
+    base: API_BASE_URL,
     signIn: `${API_BASE_URL}/api/auth/signin`,
     signUp: `${API_BASE_URL}/api/auth/signup`,
     signOut: `${API_BASE_URL}/api/auth/signout`,
