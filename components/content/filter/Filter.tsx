@@ -80,7 +80,7 @@ export default function Filter() {
         const timeoutId = setTimeout(async () => {
             setIsLoadingSuggestions(true)
             try {
-                const results = await fetchProductsBySearch(searchQuery.trim(), 1, 5)
+                const results = await fetchProductsBySearch(searchQuery.trim(), 1)
                 setSuggestions(results.data)
                 setShowSuggestions(results.data.length > 0)
                 setSelectedIndex(-1)
@@ -91,7 +91,7 @@ export default function Filter() {
             } finally {
                 setIsLoadingSuggestions(false)
             }
-        }, 300) // 300ms debounce
+        }, 300)
 
         return () => clearTimeout(timeoutId)
     }, [searchQuery])

@@ -401,7 +401,6 @@ interface ProductsSearchItem {
 
 interface ProductsSearchPagination {
   page: number;
-  limit: number;
   total: number;
   pages: number;
 }
@@ -441,7 +440,6 @@ interface ProductsDiscountItem {
 
 interface ProductsDiscountPagination {
   page: number;
-  limit: number;
   total: number;
   pages: number;
 }

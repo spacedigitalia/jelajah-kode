@@ -10,6 +10,8 @@ import Image from "next/image"
 
 import { useDiscount } from "@/hooks/discountServices"
 
+import { useEffect, useState, useCallback } from "react"
+
 function ProductDiscountCard({ item }: { item: ProductsDiscountItem }) {
     const { originalPrice, discountedPrice, activeDiscount, hasActiveDiscount } = useDiscount(item.price, item.discount);
 
@@ -94,7 +96,120 @@ function ProductDiscountCard({ item }: { item: ProductsDiscountItem }) {
     )
 }
 
+function CountdownTimer({ endDate }: { endDate: string }) {
+    const [mounted, setMounted] = useState(false);
+
+    const calculateTimeLeft = useCallback(() => {
+        const now = new Date().getTime();
+        const end = new Date(endDate).getTime();
+        const difference = end - now;
+
+        if (difference <= 0) {
+            return {
+                days: 0,
+                hours: 0,
+                minutes: 0,
+                seconds: 0,
+                expired: true
+            };
+        }
+
+        return {
+            days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+            hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+            minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+            seconds: Math.floor((difference % (1000 * 60)) / 1000),
+            expired: false
+        };
+    }, [endDate]);
+
+    const [timeLeft, setTimeLeft] = useState(() => ({
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        expired: false
+    }));
+
+    useEffect(() => {
+        // Mark as mounted to avoid hydration mismatch (deferred)
+        const mountTimeout = setTimeout(() => {
+            setMounted(true);
+        }, 0);
+
+        // Function to update time left
+        const updateTime = () => {
+            setTimeLeft(calculateTimeLeft());
+        };
+
+        // Update immediately when component mounts (deferred to avoid lint warning)
+        const immediateUpdate = setTimeout(updateTime, 0);
+
+        // Update every second
+        const interval = setInterval(updateTime, 1000);
+
+        return () => {
+            clearTimeout(mountTimeout);
+            clearTimeout(immediateUpdate);
+            clearInterval(interval);
+        };
+    }, [calculateTimeLeft]);
+
+    // Show placeholder during SSR to avoid hydration mismatch
+    if (!mounted) {
+        return (
+            <div className="flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
+                <h3 className="text-sm font-medium text-muted-foreground">Ends in</h3>
+                <div className="flex flex-row items-center gap-2 font-mono">
+                    <span className="text-lg font-bold text-primary">
+                        00:00:00
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
+    if (timeLeft.expired) {
+        return (
+            <div className="flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-destructive/10 border border-destructive/20">
+                <h3 className="text-sm font-medium text-destructive">Expired</h3>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
+            <h3 className="text-sm font-medium text-muted-foreground">Ends in</h3>
+            <div className="flex flex-row items-center gap-2 font-mono">
+                {timeLeft.days > 0 && (
+                    <span className="text-lg font-bold text-primary">
+                        {timeLeft.days}d
+                    </span>
+                )}
+                <span className="text-lg font-bold text-primary">
+                    {String(timeLeft.hours).padStart(2, '0')}:
+                    {String(timeLeft.minutes).padStart(2, '0')}:
+                    {String(timeLeft.seconds).padStart(2, '0')}
+                </span>
+            </div>
+        </div>
+    );
+}
+
 export default function ProductsDiscount({ productsDiscount }: { productsDiscount: ProductsDiscountResponse }) {
+    // Find the earliest discount end date
+    const getEarliestEndDate = () => {
+        const dates = productsDiscount.data
+            .map(item => item.discount?.until)
+            .filter((date): date is string => !!date)
+            .map(date => new Date(date))
+            .sort((a, b) => a.getTime() - b.getTime());
+
+        return dates.length > 0 ? dates[0].toISOString() : null;
+    };
+
+    const earliestEndDate = getEarliestEndDate();
+
     return (
         <section className="py-12 md:py-16 lg:py-20">
             <div className="container mx-auto px-4">
@@ -107,12 +222,13 @@ export default function ProductsDiscount({ productsDiscount }: { productsDiscoun
                     </div>
 
                     {/* Countdowns */}
-                    <div className="flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
-                        <h3 className="text-sm font-medium text-muted-foreground">Ends in</h3>
-                        <p className="text-lg font-bold text-primary font-mono">
-                            {productsDiscount.data.map((item) => item.discount.until)}
-                        </p>
-                    </div>
+                    {earliestEndDate ? (
+                        <CountdownTimer endDate={earliestEndDate} />
+                    ) : (
+                        <div className="flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-muted border">
+                            <h3 className="text-sm font-medium text-muted-foreground">No active discounts</h3>
+                        </div>
+                    )}
                 </div>
 
                 {/* Products Grid */}

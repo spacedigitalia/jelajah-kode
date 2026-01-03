@@ -55,12 +55,11 @@ export const fetchProductsById = async (
 
 export const fetchProductsBySearch = async (
   query: string,
-  page: number = 1,
-  limit: number = 10
+  page: number = 1
 ): Promise<ProductsSearchResponse> => {
   try {
     const response = await fetch(
-      API_CONFIG.ENDPOINTS.products.search(query, page, limit),
+      API_CONFIG.ENDPOINTS.products.search(query, page),
       {
         next: { revalidate: 0 },
         headers: {
@@ -84,7 +83,6 @@ export const fetchProductsBySearch = async (
       data: [],
       pagination: {
         page: 1,
-        limit: 10,
         total: 0,
         pages: 0,
       },
@@ -142,20 +140,16 @@ export const fetchProductType = async (): Promise<Type[]> => {
 };
 
 export const fetchProductsDiscount = async (
-  page: number = 1,
-  limit: number = 10
+  page: number = 1
 ): Promise<ProductsDiscountResponse> => {
   try {
-    const response = await fetch(
-      API_CONFIG.ENDPOINTS.products.discount(page, limit),
-      {
-        next: { revalidate: 0 },
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_CONFIG.SECRET}`,
-        },
-      }
-    );
+    const response = await fetch(API_CONFIG.ENDPOINTS.products.discount(page), {
+      next: { revalidate: 0 },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_CONFIG.SECRET}`,
+      },
+    });
 
     if (!response.ok) {
       throw new Error(
@@ -173,7 +167,6 @@ export const fetchProductsDiscount = async (
       data: [],
       pagination: {
         page: 1,
-        limit: 10,
         total: 0,
         pages: 0,
       },
