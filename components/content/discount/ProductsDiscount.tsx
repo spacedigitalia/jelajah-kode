@@ -12,6 +12,8 @@ import { useDiscount } from "@/hooks/discountServices"
 
 import { useCountdown } from "@/hooks/useCountdown"
 
+import { useState, useLayoutEffect } from "react"
+
 function ProductDiscountCard({ item }: { item: ProductsDiscountItem }) {
     const { originalPrice, discountedPrice, activeDiscount, hasActiveDiscount } = useDiscount(item.price, item.discount);
 
@@ -104,6 +106,17 @@ export default function ProductsDiscount({ productsDiscount }: { productsDiscoun
         .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
 
     const countdown = useCountdown(earliestExpiryDate);
+    // Only render countdown after client-side hydration to avoid hydration mismatch
+    // Initialize to false so server and client render the same initial value
+    const [mounted, setMounted] = useState(false);
+
+    // Set mounted to true after client-side hydration
+    // This is a legitimate pattern for handling Next.js hydration mismatches
+    // Using useLayoutEffect to set mounted state after hydration
+    useLayoutEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setMounted(true);
+    }, []);
 
     // Format countdown as DD:HH:MM:SS
     const formatCountdown = () => {
@@ -132,7 +145,9 @@ export default function ProductsDiscount({ productsDiscount }: { productsDiscoun
                     {earliestExpiryDate && (
                         <div className="flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
                             <h3 className="text-sm font-medium text-muted-foreground">Ends in</h3>
-                            <p className="text-lg font-bold text-primary font-mono">{formatCountdown()}</p>
+                            <p className="text-lg font-bold text-primary font-mono">
+                                {mounted ? formatCountdown() : "00:00:00:00"}
+                            </p>
                         </div>
                     )}
                 </div>
