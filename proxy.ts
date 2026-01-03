@@ -42,11 +42,18 @@ export default function proxy(request: NextRequest) {
   // CRITICAL: Always allow all API routes to pass through without any checks
   // This prevents redirects on POST/PUT/DELETE requests to API endpoints
   // Check both /api/ and /api to handle all API routes
+  // This includes all query parameters (page, limit, etc.) with & symbols
   if (pathname.startsWith("/api/") || pathname === "/api") {
     // Log in development for debugging
     if (process.env.NODE_ENV === "development") {
-      console.log(`[PROXY] Allowing API route: ${method} ${pathname}`);
+      console.log(
+        `[PROXY] Allowing API route: ${method} ${pathname}${
+          request.nextUrl.search || ""
+        }`
+      );
     }
+    // CRITICAL: Return next() immediately to preserve all query parameters
+    // This ensures URLs like /api/products/discount?page=1&limit=10 work correctly
     return NextResponse.next();
   }
 

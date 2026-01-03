@@ -1,14 +1,20 @@
 import { API_CONFIG } from "@/lib/config";
 
-export const fetchProducts = async (): Promise<Products[]> => {
+export const fetchProducts = async (
+  page: number = 1,
+  limit: number = 10
+): Promise<Products[]> => {
   try {
-    const response = await fetch(API_CONFIG.ENDPOINTS.products.base, {
-      next: { revalidate: 10 },
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${API_CONFIG.SECRET}`,
-      },
-    });
+    const response = await fetch(
+      `${API_CONFIG.ENDPOINTS.products.base}?page=${page}&limit=${limit}`,
+      {
+        next: { revalidate: 10 },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_CONFIG.SECRET}`,
+        },
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to fetch products: ${response.statusText}`);
@@ -55,11 +61,12 @@ export const fetchProductsById = async (
 
 export const fetchProductsBySearch = async (
   query: string,
-  page: number = 1
+  page: number = 1,
+  limit: number = 10
 ): Promise<ProductsSearchResponse> => {
   try {
     const response = await fetch(
-      API_CONFIG.ENDPOINTS.products.search(query, page),
+      API_CONFIG.ENDPOINTS.products.search(query, page, limit),
       {
         next: { revalidate: 0 },
         headers: {
@@ -84,6 +91,7 @@ export const fetchProductsBySearch = async (
       pagination: {
         page: 1,
         total: 0,
+        limit: 10,
         pages: 0,
       },
       query: query,
@@ -140,10 +148,25 @@ export const fetchProductType = async (): Promise<Type[]> => {
 };
 
 export const fetchProductsDiscount = async (
-  page: number = 1
+  page: number = 1,
+  limit: number = 10
 ): Promise<ProductsDiscountResponse> => {
   try {
-    const response = await fetch(API_CONFIG.ENDPOINTS.products.discount(page), {
+    // Use URLSearchParams to properly encode query parameters
+    // This ensures & symbols and other special characters are handled correctly
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+
+    const url = `${
+      API_CONFIG.ENDPOINTS.products.discount
+    }?${params.toString()}`;
+
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[FETCH] Fetching products discount from: ${url}`);
+    }
+
+    const response = await fetch(url, {
       next: { revalidate: 0 },
       headers: {
         "Content-Type": "application/json",
@@ -153,7 +176,7 @@ export const fetchProductsDiscount = async (
 
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch products discount: ${response.statusText}`
+        `Failed to fetch products discount: ${response.statusText} (${response.status})`
       );
     }
 
@@ -168,6 +191,7 @@ export const fetchProductsDiscount = async (
       pagination: {
         page: 1,
         total: 0,
+        limit: 10,
         pages: 0,
       },
     };
