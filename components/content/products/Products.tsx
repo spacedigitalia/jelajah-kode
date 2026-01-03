@@ -1,7 +1,6 @@
 "use client"
 
 export default function Products({ products }: { products: Products[] }) {
-    // Ensure products is always an array
     const productsArray = Array.isArray(products) ? products : [];
 
     return (

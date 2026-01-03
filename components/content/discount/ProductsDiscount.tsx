@@ -197,9 +197,11 @@ function CountdownTimer({ endDate }: { endDate: string }) {
 }
 
 export default function ProductsDiscount({ productsDiscount }: { productsDiscount: ProductsDiscountResponse }) {
+    const productsArray = Array.isArray(productsDiscount.data) ? productsDiscount.data : [];
+
     // Find the earliest discount end date
     const getEarliestEndDate = () => {
-        const dates = productsDiscount.data
+        const dates = productsArray
             .map(item => item.discount?.until)
             .filter((date): date is string => !!date)
             .map(date => new Date(date))
@@ -234,7 +236,7 @@ export default function ProductsDiscount({ productsDiscount }: { productsDiscoun
                 {/* Products Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {
-                        productsDiscount.data.map((item, idx) => (
+                        productsArray.map((item, idx) => (
                             <ProductDiscountCard key={idx} item={item} />
                         ))
                     }
